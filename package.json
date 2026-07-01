@@ -1,0 +1,84 @@
+{
+  "name": "featurette",
+  "version": "0.1.0-alpha.0",
+  "description": "A TypeScript framework for making short films that run in the terminal.",
+  "type": "module",
+  "license": "MIT",
+  "author": "zsumz <shawn@zsumz.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zsumz/featurette.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zsumz/featurette/issues"
+  },
+  "homepage": "https://github.com/zsumz/featurette#readme",
+  "keywords": [
+    "terminal",
+    "terminal-animation",
+    "terminal-film",
+    "cli",
+    "typescript",
+    "storytelling",
+    "ascii-art",
+    "transcript"
+  ],
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "packageManager": "npm@10.9.8",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    },
+    "./test": {
+      "types": "./dist/test.d.ts",
+      "default": "./dist/test.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "npm run clean:dist && npm run build:lib",
+    "build:lib": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist coverage",
+    "clean:dist": "rm -rf dist",
+    "coverage": "npm run build && vitest run --coverage",
+    "doctor": "npm run build:lib && node scripts/doctor.mjs",
+    "lint": "npm run build:lib && eslint .",
+    "pack:dry-run": "npm --cache /tmp/featurette-npm-cache pack --dry-run",
+    "prepack": "npm run build",
+    "prepublishOnly": "node scripts/publish-guard.mjs",
+    "publish:alpha": "npm publish --tag alpha --access public",
+    "publish:latest": "npm publish --tag latest --access public",
+    "publish:dry-run": "npm run publish:dry-run:alpha",
+    "publish:dry-run:alpha": "npm publish --dry-run --tag alpha --access public --json --cache /tmp/featurette-npm-cache",
+    "publish:dry-run:latest": "npm publish --dry-run --tag latest --access public --json --cache /tmp/featurette-npm-cache",
+    "smoke": "smoque run smoke/ --ci",
+    "smoke:doctor": "smoque doctor",
+    "smoke:list": "smoque list smoke/",
+    "test": "npm run build && vitest run",
+    "typecheck": "npm run build:lib && tsc -p tsconfig.json",
+    "validate": "npm run lint && npm run typecheck && npm test && npm run coverage && npm run doctor && npm run smoke:doctor && npm run smoke:list && npm run smoke && npm run pack:dry-run"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@vitest/coverage-v8": "^4.1.9",
+    "eslint": "^10.6.0",
+    "eslint-config-rubric": "^0.1.0-alpha.0",
+    "smoque": "^0.1.0-alpha.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.9"
+  }
+}
