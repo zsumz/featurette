@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import type { TerminalInfo, TerminalResizeSource } from '../dist/index.js';
 import type { ReadableTTYLike, WritableTTYLike } from '../dist/node.js';
 
 export interface FakeInputOptions {
@@ -20,6 +21,10 @@ export interface FakeOutputOptions {
 
 export interface FakeOutput extends WritableTTYLike {
     text(): string;
+}
+
+export interface FakeResizeSource extends TerminalResizeSource {
+    resize(update: Partial<TerminalInfo>): void;
 }
 
 export function createFakeInput(options: FakeInputOptions = {}): FakeInput {
@@ -57,6 +62,28 @@ export function createFakeOutput(options: FakeOutputOptions = {}): FakeOutput {
         },
         text() {
             return chunks.join('');
+        },
+    };
+}
+
+export function createFakeResizeSource(initial: Partial<TerminalInfo> = {}): FakeResizeSource {
+    const emitter = new EventEmitter();
+    let current: Partial<TerminalInfo> = { ...initial };
+
+    return {
+        current() {
+            return current;
+        },
+        onResize(handler) {
+            emitter.on('resize', handler);
+
+            return () => {
+                emitter.off('resize', handler);
+            };
+        },
+        resize(update) {
+            current = { ...current, ...update };
+            emitter.emit('resize');
         },
     };
 }

@@ -4,6 +4,7 @@ import type { FeaturetteFilm } from '../film.js';
 import { InputController } from '../input.js';
 import { Screen } from '../screen.js';
 import { assertPlayableSize, planPlayback } from './playback-plan.js';
+import { RuntimeResizeState } from './resize.js';
 import { resolveTerminalInfo } from './terminal-info.js';
 import type { RunFilmOptions, RunFilmResult } from './types.js';
 
@@ -11,8 +12,9 @@ export async function runFilm(
     film: FeaturetteFilm,
     options: RunFilmOptions,
 ): Promise<RunFilmResult> {
-    const terminal = resolveTerminalInfo(film.options.minSize, options.terminal);
-    const plan = planPlayback(film, terminal, {
+    const initialTerminal = resolveTerminalInfo(film.options.minSize, options.terminal);
+    const resize = new RuntimeResizeState(initialTerminal, options.resizeSource);
+    const plan = planPlayback(film, resize.terminal, {
         transcript: options.transcript,
         transcriptWhenNonTTY: options.transcriptWhenNonTTY,
     });
@@ -24,11 +26,11 @@ export async function runFilm(
         : film.scenes;
     const scenesPlayed: string[] = [];
 
-    await options.renderer.begin?.(terminal);
+    await options.renderer.begin?.(resize.terminal);
 
     try {
         for (const scene of scenes) {
-            const screen = new Screen(terminal.columns, terminal.rows);
+            const screen = new Screen(resize.terminal.columns, resize.terminal.rows);
             const interruptHandlers = [...film.interruptHandlers];
             const filmPrefersReducedMotion =
                 film.options.reducedMotion !== undefined && film.options.reducedMotion !== false;
@@ -38,7 +40,7 @@ export async function runFilm(
                 screen,
                 options.renderer,
                 clock,
-                terminal,
+                resize.terminal,
                 input,
                 interruptHandlers,
                 {
@@ -48,6 +50,7 @@ export async function runFilm(
                         plan.mode === 'transcript' || (options.reducedMotion ?? filmPrefersReducedMotion),
                     skip: plan.mode === 'transcript' || options.skip,
                     speed: options.speed,
+                    resize,
                 },
             );
 
@@ -75,6 +78,7 @@ export async function runFilm(
         }
     } finally {
         input.clear();
+        resize.dispose();
         await options.renderer.end?.();
     }
 
@@ -82,7 +86,7 @@ export async function runFilm(
         elapsed: clock.now(),
         scenesPlayed,
         mode: plan.mode,
-        terminal,
+        terminal: resize.terminal,
         tooSmall: plan.tooSmall,
         fallbackReason: plan.fallbackReason,
     };

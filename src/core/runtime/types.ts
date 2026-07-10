@@ -2,6 +2,7 @@ import type { Clock } from '../clock.js';
 import type { InputController } from '../input.js';
 import type { Renderer } from '../renderer.js';
 import type { TerminalInfo } from '../types.js';
+import type { TerminalResizeSource } from './resize.js';
 
 export type PlaybackMode = 'visual' | 'transcript';
 
@@ -25,6 +26,7 @@ export interface RunFilmOptions {
     speed?: number;
     transcript?: boolean;
     transcriptWhenNonTTY?: boolean;
+    resizeSource?: TerminalResizeSource;
 }
 
 export interface RunFilmResult {

@@ -6,7 +6,14 @@ export {
     type InputAPI,
     type CountdownOptions,
     type GlitchOptions,
+    type KeyframesOptions,
     type LogStreamOptions,
+    type MotionEasing,
+    type MotionFrame,
+    type MotionPoint,
+    type MotionPointFrame,
+    type MotionTimelineOptions,
+    type MoveAlongOptions,
     type MergeConflictOptions,
     type ProgressEffectOptions,
     type ScanlinesOptions,
@@ -19,6 +26,7 @@ export {
     type TestRunnerLine,
     type TestRunnerOptions,
     type TitleCardOptions,
+    type TweenOptions,
 } from './core/context.js';
 export { Point, center, charCellWidth, stringCellWidth, stripAnsi } from './core/position.js';
 export { sprite } from './core/sprite.js';
@@ -33,8 +41,11 @@ export {
     runFilm,
     type PlaybackMode,
     type PlaybackPlan,
+    type ResizeEvent,
+    type ResizeHandler,
     type RunFilmOptions,
     type RunFilmResult,
+    type TerminalResizeSource,
 } from './core/runtime.js';
 export { StringRenderer } from './renderers/string.js';
 export { TerminalRenderer, type TerminalRendererOptions, type WritableLike } from './renderers/terminal.js';

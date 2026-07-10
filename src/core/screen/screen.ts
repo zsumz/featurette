@@ -7,8 +7,8 @@ export class Screen {
     private readonly layers: Map<string, Layer> = new Map();
 
     constructor(
-        public readonly columns: number,
-        public readonly rows: number,
+        public columns: number,
+        public rows: number,
     ) {
         this.layer('main', { zIndex: 0 });
     }
@@ -39,6 +39,11 @@ export class Screen {
         for (const layer of this.layers.values()) {
             layer.clear();
         }
+    }
+
+    public resize(size: TerminalSize): void {
+        this.columns = Math.max(1, Math.floor(size.columns));
+        this.rows = Math.max(1, Math.floor(size.rows));
     }
 
     public compose(elapsed = 0, options: ScreenComposeOptions = {}): Frame {
