@@ -1,11 +1,18 @@
 import type { EventEmitter } from 'node:events';
 import readline from 'node:readline';
 import type { InputController, KeyEvent } from '../core/input.js';
+import type { TerminalResizeSource } from '../core/runtime.js';
 import type { TerminalInfo } from '../core/types.js';
 import type { WritableLike } from '../renderers/terminal.js';
 
 type KeypressKey = Omit<KeyEvent, 'name'> & { name?: string };
 type KeypressHandler = (sequence: string, key: KeypressKey) => void;
+type ResizeHandler = () => void;
+
+export interface SignalEmitterLike {
+    on(event: 'SIGWINCH', listener: ResizeHandler): this;
+    off(event: 'SIGWINCH', listener: ResizeHandler): this;
+}
 
 export interface ReadableTTYLike extends EventEmitter {
     isTTY?: boolean;
@@ -27,7 +34,9 @@ export interface TerminalSessionOptions {
     input?: ReadableTTYLike;
     output?: WritableTTYLike;
     exit?: (code: number) => void;
+    ansi?: boolean;
     useAltScreen?: boolean;
+    signals?: SignalEmitterLike;
 }
 
 export class TerminalSession {
@@ -50,8 +59,7 @@ export class TerminalSession {
             columns: streamColumns(this.output, 80),
             rows: streamRows(this.output, 24),
             isTTY: this.output.isTTY === true,
-            colorDepth:
-        typeof this.output.getColorDepth === 'function' ? this.output.getColorDepth() : 1,
+            colorDepth: typeof this.output.getColorDepth === 'function' ? this.output.getColorDepth() : 1,
             unicode: process.env.LC_ALL !== 'C',
         };
     }
@@ -61,6 +69,10 @@ export class TerminalSession {
     }
 
     public hideCursor(): void {
+        if (!this.ansi) {
+            return;
+        }
+
         if (!this.cursorHidden) {
             this.write('\x1b[?25l');
             this.cursorHidden = true;
@@ -68,6 +80,10 @@ export class TerminalSession {
     }
 
     public showCursor(): void {
+        if (!this.ansi) {
+            return;
+        }
+
         if (this.cursorHidden) {
             this.write('\x1b[?25h');
             this.cursorHidden = false;
@@ -75,6 +91,10 @@ export class TerminalSession {
     }
 
     public enterAltScreen(): void {
+        if (!this.ansi) {
+            return;
+        }
+
         if (!this.altScreen && (this.options.useAltScreen ?? true)) {
             this.write('\x1b[?1049h');
             this.altScreen = true;
@@ -82,6 +102,10 @@ export class TerminalSession {
     }
 
     public leaveAltScreen(): void {
+        if (!this.ansi) {
+            return;
+        }
+
         if (this.altScreen) {
             this.write('\x1b[?1049l');
             this.altScreen = false;
@@ -135,6 +159,20 @@ export class TerminalSession {
         this.cleanupHandlers.push(() => this.input.off('keypress', handler));
     }
 
+    public resizeSource(): TerminalResizeSource {
+        return {
+            current: () => this.info,
+            onResize: (handler) => {
+                const signals = this.options.signals ?? process;
+                signals.on('SIGWINCH', handler);
+
+                return () => {
+                    signals.off('SIGWINCH', handler);
+                };
+            },
+        };
+    }
+
     public restore(): void {
         for (const cleanup of this.cleanupHandlers.splice(0)) {
             cleanup();
@@ -148,12 +186,19 @@ export class TerminalSession {
 
         this.showCursor();
         this.leaveAltScreen();
-        this.write('\x1b[0m');
+
+        if (this.ansi) {
+            this.write('\x1b[0m');
+        }
     }
 
     private exit(code: number): void {
         const exit = this.options.exit ?? ((exitCode: number) => process.exit(exitCode));
         exit(code);
+    }
+
+    private get ansi(): boolean {
+        return this.options.ansi ?? true;
     }
 }
 

@@ -6,6 +6,7 @@ import type { TerminalRendererOptions } from '../renderers/terminal.js';
 import type { TerminalSessionOptions } from './session.js';
 
 export interface PlayOptions extends Omit<RunFilmOptions, 'renderer' | 'input'>, TerminalSessionOptions {
+    ansi?: boolean;
     renderer?: Renderer;
     controller?: InputController;
     useAltScreen?: boolean;
@@ -28,6 +29,7 @@ export function toRunFilmOptions(options: PlayOptions): Omit<RunFilmOptions, 're
         speed: options.speed,
         transcript: options.transcript,
         transcriptWhenNonTTY: options.transcriptWhenNonTTY,
+        resizeSource: options.resizeSource,
     };
 }
 
@@ -36,8 +38,7 @@ export function terminalInfoFromOutput(output: TerminalSessionOptions['output'])
         columns: output?.columns,
         rows: output?.rows,
         isTTY: output?.isTTY,
-        colorDepth:
-      typeof output?.getColorDepth === 'function' ? output.getColorDepth() : undefined,
+        colorDepth: typeof output?.getColorDepth === 'function' ? output.getColorDepth() : undefined,
         unicode: process.env.LC_ALL !== 'C',
     };
 }

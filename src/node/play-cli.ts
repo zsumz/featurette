@@ -74,10 +74,12 @@ export async function play(
         return runFilm(film, {
             ...toRunFilmOptions(options),
             input: controller,
+            resizeSource: options.resizeSource ?? session.resizeSource(),
             terminal,
             renderer: new TerminalRenderer({
                 output: session.output,
                 ...options.terminalRenderer,
+                ansi: options.ansi ?? options.terminalRenderer?.ansi,
             }),
         });
     }, options);
@@ -91,13 +93,14 @@ export async function playCli(
 
     return play(film, {
         ...options,
-        color: flags.color,
+        color: flags.noAnsi ? false : flags.color,
+        ansi: !flags.noAnsi,
         unicode: !flags.noUnicode,
         reducedMotion: flags.reducedMotion,
         skip: flags.skip,
         speed: flags.speed,
         scene: flags.scene,
         transcript: flags.transcript,
-        useAltScreen: !flags.noAltScreen,
+        useAltScreen: !flags.noAltScreen && !flags.noAnsi,
     });
 }

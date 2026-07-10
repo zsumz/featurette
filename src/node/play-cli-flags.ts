@@ -5,6 +5,7 @@ export interface ParsedPlayCliFlags {
     transcript: boolean;
     skip: boolean;
     noAltScreen: boolean;
+    noAnsi: boolean;
     speed?: number;
     scene?: string;
 }
@@ -17,6 +18,7 @@ export function parsePlayCliFlags(argv: string[]): ParsedPlayCliFlags {
         transcript: false,
         skip: false,
         noAltScreen: false,
+        noAnsi: false,
     };
 
     for (let index = 0; index < argv.length; index += 1) {
@@ -28,6 +30,7 @@ export function parsePlayCliFlags(argv: string[]): ParsedPlayCliFlags {
         else if (arg === '--transcript') flags.transcript = true;
         else if (arg === '--skip') flags.skip = true;
         else if (arg === '--no-alt-screen') flags.noAltScreen = true;
+        else if (arg === '--no-ansi') flags.noAnsi = true;
         else if (arg === '--speed') flags.speed = Number(argv[++index] ?? '1');
         else if (arg === '--scene') flags.scene = argv[++index];
     }

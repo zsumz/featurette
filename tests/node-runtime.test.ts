@@ -55,6 +55,31 @@ test('playCli transcript mode writes plain transcript output', async () => {
     assert.equal(output.text().includes('\x1b['), false);
 });
 
+test('playCli no-ansi mode writes visual frames without terminal escape sequences', async () => {
+    const input = createFakeInput();
+    const output = createFakeOutput({ isTTY: true, columns: 24, rows: 6 });
+    const film = defineFilm({
+        title: 'Plain TTY',
+        voices: { process: { speed: 0 } },
+    });
+
+    film.scene('one', async ($) => {
+        await $.say('process', 'plain visual words');
+    });
+
+    const result = await playCli(film, {
+        argv: ['--no-ansi', '--skip'],
+        input,
+        output,
+        terminalRenderer: { ansi: true },
+    });
+
+    assert.equal(result.mode, 'visual');
+    assert.match(output.text(), /plain visual words/);
+    assert.equal(output.text().includes('\x1b['), false);
+    assert.deepEqual(input.rawModes, [true, false]);
+});
+
 test('playCli applies scene, speed, color, and unicode flags', async () => {
     const clock = new FakeClock();
     const renderOptions: RenderOptions[] = [];
