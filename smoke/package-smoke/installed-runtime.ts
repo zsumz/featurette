@@ -6,8 +6,10 @@ export async function assertInstalledRuntime(
 ): Promise<void> {
     await assertPublicSurface(t, fixture);
     await assertMainExportRunsFilm(t, fixture);
+    await assertMainExportHandlesResize(t, fixture);
     await assertTestExportRendersScene(t, fixture);
     await assertNodeExportInspectsTerminal(t, fixture);
+    await assertNodeExportPlaysWithoutAnsi(t, fixture);
 }
 
 async function assertPublicSurface(t: SmokeContext, fixture: NpmFixture): Promise<void> {
@@ -27,6 +29,15 @@ async function assertMainExportRunsFilm(t: SmokeContext, fixture: NpmFixture): P
             const renderer = new StringRenderer();
 
             film.scene('one', async ($) => {
+                await $.effects.moveAlong({
+                    path: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }],
+                    duration: 20,
+                    frames: 3,
+                    layer: 'packet',
+                    draw: ({ point, layer }) => {
+                        layer.text(point.x, point.y, '*');
+                    },
+                });
                 await $.say('process', 'packed and alive');
             });
 
@@ -42,6 +53,58 @@ async function assertMainExportRunsFilm(t: SmokeContext, fixture: NpmFixture): P
 
             if (!renderer.lastFrame().includes('packed and alive')) {
                 throw new Error('main export did not render the film');
+            }
+        `);
+    });
+}
+
+async function assertMainExportHandlesResize(t: SmokeContext, fixture: NpmFixture): Promise<void> {
+    await t.step('installed package handles resize-aware scene redraws', async () => {
+        await fixture.node.inline(`
+            import { EventEmitter } from 'node:events';
+            import { FakeClock, StringRenderer, defineFilm, runFilm } from 'featurette';
+
+            const emitter = new EventEmitter();
+            let current = {
+                columns: 20,
+                rows: 5,
+                isTTY: true,
+                colorDepth: 24,
+                unicode: true,
+            };
+            const resizeSource = {
+                current: () => current,
+                onResize: (handler) => {
+                    emitter.on('resize', handler);
+                    return () => emitter.off('resize', handler);
+                },
+            };
+            const film = defineFilm({ title: 'Package Resize' });
+            const renderer = new StringRenderer();
+
+            film.scene('one', async ($) => {
+                $.onResize(async ({ current }) => {
+                    await $.clear();
+                    $.draw.text(0, 0, 'resized ' + current.columns);
+                    await $.cut();
+                });
+
+                $.draw.text(0, 0, 'before');
+                await $.cut();
+                current = { ...current, columns: 12, rows: 4 };
+                emitter.emit('resize');
+                await $.beat(1);
+            });
+
+            const result = await runFilm(film, {
+                renderer,
+                resizeSource,
+                terminal: resizeSource.current(),
+                clock: new FakeClock(),
+            });
+
+            if (result.terminal.columns !== 12 || !renderer.lastFrame().includes('resized 12')) {
+                throw new Error('main export did not process resize redraws');
             }
         `);
     });
@@ -90,6 +153,61 @@ async function assertNodeExportInspectsTerminal(t: SmokeContext, fixture: NpmFix
 
             if (report.verdict !== 'limited' || report.sizeOk !== false) {
                 throw new Error('node export did not inspect terminal capability');
+            }
+        `);
+    });
+}
+
+async function assertNodeExportPlaysWithoutAnsi(t: SmokeContext, fixture: NpmFixture): Promise<void> {
+    await t.step('installed package plays visual output without ansi escapes', async () => {
+        await fixture.node.inline(`
+            import { EventEmitter } from 'node:events';
+            import { defineFilm } from 'featurette';
+            import { playCli } from 'featurette/node';
+
+            const input = new EventEmitter();
+            input.isTTY = true;
+            input.isRaw = false;
+            input.rawModes = [];
+            input.resume = () => input;
+            input.setRawMode = (mode) => {
+                input.rawModes.push(mode);
+                input.isRaw = mode;
+                return input;
+            };
+
+            const chunks = [];
+            const output = {
+                isTTY: true,
+                columns: 24,
+                rows: 6,
+                write(chunk) {
+                    chunks.push(String(chunk));
+                    return true;
+                },
+                getColorDepth() {
+                    return 24;
+                },
+            };
+            const film = defineFilm({
+                title: 'No ANSI',
+                voices: { process: { speed: 0 } },
+            });
+
+            film.scene('one', async ($) => {
+                await $.say('process', 'plain package playback');
+            });
+
+            await playCli(film, {
+                argv: ['--no-ansi', '--skip'],
+                input,
+                output,
+            });
+
+            const text = chunks.join('');
+
+            if (text.includes('\\x1b[') || !text.includes('plain package playback')) {
+                throw new Error('node export did not play without ansi escapes');
             }
         `);
     });

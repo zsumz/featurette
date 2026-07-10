@@ -8,10 +8,16 @@ const typeSmokeSource = `
         defineFilm,
         frameToString,
         runFilm,
+        type MotionFrame,
+        type MotionPointFrame,
+        type MoveAlongOptions,
+        type ResizeEvent,
         type RunFilmResult,
         type ScreenComposeOptions,
         type ScreenShakeOptions,
         type SceneContext,
+        type TerminalResizeSource,
+        type TweenOptions,
     } from 'featurette';
     import { inspectTerminal, type DoctorReport } from 'featurette/node';
     import { renderScene, type RenderSceneResult } from 'featurette/test';
@@ -25,9 +31,35 @@ const typeSmokeSource = `
 
     film.scene('one', async ($: SceneContext) => {
         const shake: ScreenShakeOptions = { duration: 20, intensity: 1 };
+        const tween: TweenOptions = {
+            from: { x: 0, y: 0 },
+            to: { x: 2, y: 0 },
+            draw: (frame: MotionPointFrame) => {
+                void frame.point.x;
+            },
+        };
+        const path: MoveAlongOptions = {
+            path: [{ x: 0, y: 0 }, { x: 'right', y: 'bottom' }],
+            draw: (frame: MotionPointFrame) => {
+                void frame.segment;
+            },
+        };
+        const frame: MotionFrame = {
+            frame: 0,
+            frames: 1,
+            elapsed: 0,
+            progress: 1,
+            eased: 1,
+        };
+        $.onResize((event: ResizeEvent) => {
+            void event.current.columns;
+        });
         await $.effects.progress({ label: 'types', width: 4 });
+        await $.effects.tween(tween);
+        await $.effects.moveAlong(path);
         await $.effects.screenShake(shake);
         await $.say('process', 'typed package');
+        void frame;
     });
 
     const screen = createScreen({ columns: 12, rows: 4 });
@@ -35,8 +67,13 @@ const typeSmokeSource = `
     const composed = frameToString(screen.compose(0, composeOptions));
 
     const renderer = new StringRenderer();
+    const resizeSource: TerminalResizeSource = {
+        current: () => ({ columns: 32, rows: 8 }),
+        onResize: () => () => {},
+    };
     const runResult: Promise<RunFilmResult> = runFilm(film, {
         renderer,
+        resizeSource,
         terminal: { columns: 32, rows: 8 },
         skip: true,
     });
