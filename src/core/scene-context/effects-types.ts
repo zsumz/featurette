@@ -1,6 +1,64 @@
 import type { Point } from '../position.js';
+import type { Layer } from '../screen.js';
 import type { Position, Style } from '../types.js';
 import type { FadeOptions, TypeOptions } from './text-types.js';
+
+export type MotionEasing =
+    | 'linear'
+    | 'ease-in'
+    | 'ease-out'
+    | 'ease-in-out'
+    | ((progress: number) => number);
+
+export type MotionPoint = Position | Point;
+
+export interface MotionFrame {
+    frame: number;
+    frames: number;
+    elapsed: number;
+    progress: number;
+    eased: number;
+    layer?: Layer;
+}
+
+export interface MotionPointFrame extends MotionFrame {
+    point: {
+        x: number;
+        y: number;
+    };
+    segment: number;
+}
+
+export interface MotionTimelineOptions {
+    duration?: number;
+    frames?: number;
+    easing?: MotionEasing;
+    layer?: string;
+    clear?: boolean;
+}
+
+export interface KeyframesOptions extends MotionTimelineOptions {
+    draw(frame: MotionFrame): void | Promise<void>;
+}
+
+export interface TweenOptions extends MotionTimelineOptions {
+    from: MotionPoint;
+    to: MotionPoint;
+    subject?: {
+        columns?: number;
+        rows?: number;
+    };
+    draw(frame: MotionPointFrame): void | Promise<void>;
+}
+
+export interface MoveAlongOptions extends MotionTimelineOptions {
+    path: [MotionPoint, MotionPoint, ...MotionPoint[]];
+    subject?: {
+        columns?: number;
+        rows?: number;
+    };
+    draw(frame: MotionPointFrame): void | Promise<void>;
+}
 
 export interface StarfieldOptions {
     duration?: number;
@@ -98,6 +156,9 @@ export interface ScreenShakeOptions {
 }
 
 export interface EffectsAPI {
+    keyframes(options: KeyframesOptions): Promise<void>;
+    tween(options: TweenOptions): Promise<void>;
+    moveAlong(options: MoveAlongOptions): Promise<void>;
     titleCard(options: TitleCardOptions): Promise<void>;
     fadeIn(duration?: number, draw?: () => void | Promise<void>, options?: FadeOptions): Promise<void>;
     fadeOut(duration?: number, options?: FadeOptions): Promise<void>;

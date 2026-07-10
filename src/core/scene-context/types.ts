@@ -3,7 +3,14 @@ export type {
     CountdownOptions,
     EffectsAPI,
     GlitchOptions,
+    KeyframesOptions,
     LogStreamOptions,
+    MotionEasing,
+    MotionFrame,
+    MotionPoint,
+    MotionPointFrame,
+    MotionTimelineOptions,
+    MoveAlongOptions,
     MergeConflictOptions,
     ProgressEffectOptions,
     ScanlinesOptions,
@@ -12,6 +19,7 @@ export type {
     TestRunnerLine,
     TestRunnerOptions,
     TitleCardOptions,
+    TweenOptions,
 } from './effects-types.js';
 export type { InputAPI } from './input-types.js';
 export type { SceneContext, SceneRuntimeOptions, SceneTask } from './scene-types.js';

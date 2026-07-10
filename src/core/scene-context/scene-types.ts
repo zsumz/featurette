@@ -1,5 +1,6 @@
 import type { InterruptHandler } from '../film.js';
 import type { Point } from '../position.js';
+import type { ResizeHandler } from '../runtime.js';
 import type { Layer, Screen } from '../screen.js';
 import type { TerminalInfo } from '../types.js';
 import type { DrawAPI } from './draw-types.js';
@@ -36,6 +37,7 @@ export interface SceneContext {
     race<T>(tasks: Array<() => T | Promise<T>>): Promise<T>;
     center(): Point;
     onInterrupt(handler: InterruptHandler): void;
+    onResize(handler: ResizeHandler): () => void;
     skipScene(): never;
     quit(): never;
     exit(): never;

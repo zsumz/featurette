@@ -4,6 +4,7 @@ import type { InputController } from '../input.js';
 import type { Point } from '../position.js';
 import { center } from '../position.js';
 import type { Renderer } from '../renderer.js';
+import type { ResizeHandler, RuntimeResizeState } from '../runtime.js';
 import type { Layer, Screen } from '../screen.js';
 import type { TerminalInfo } from '../types.js';
 import type {
@@ -30,6 +31,8 @@ export class SceneContextImpl implements SceneContext {
     public readonly input: InputAPI;
     private readonly host: SceneRuntimeHost;
     private readonly textApi: SceneTextApi;
+    private readonly resizeHandlers: Set<ResizeHandler> = new Set();
+    private handlingResize = false;
 
     constructor(
         public readonly film: FeaturetteFilm,
@@ -40,7 +43,7 @@ export class SceneContextImpl implements SceneContext {
         public readonly terminal: TerminalInfo,
         private readonly inputController: InputController,
         private readonly interruptHandlers: InterruptHandler[],
-        private readonly options: SceneRuntimeOptions = {},
+        private readonly options: SceneRuntimeOptions & { resize?: RuntimeResizeState } = {},
     ) {
         this.host = new SceneRuntimeHost({
             film,
@@ -70,6 +73,7 @@ export class SceneContextImpl implements SceneContext {
     }
 
     public async clear(options: ClearOptions = {}): Promise<void> {
+        await this.flushResize();
         this.screen.clear(options.layer);
         this.textApi.resetCursor();
         await this.render();
@@ -86,14 +90,18 @@ export class SceneContextImpl implements SceneContext {
 
         const speed = this.options.speed && this.options.speed > 0 ? this.options.speed : 1;
         await this.clock.wait(ms / speed);
+        await this.flushResize();
     }
 
     public async cut(): Promise<void> {
+        await this.flushResize();
         await this.render();
     }
 
     public async type(text: string, options: TypeOptions = {}): Promise<void> {
+        await this.flushResize();
         await this.textApi.type(text, options);
+        await this.flushResize();
     }
 
     public async say(voice: string, text: string, options: SayOptions = {}): Promise<void> {
@@ -160,6 +168,14 @@ export class SceneContextImpl implements SceneContext {
         this.interruptHandlers.push(handler);
     }
 
+    public onResize(handler: ResizeHandler): () => void {
+        this.resizeHandlers.add(handler);
+
+        return () => {
+            this.resizeHandlers.delete(handler);
+        };
+    }
+
     public skipScene(): never {
         throw new SceneControlError('skip-scene');
     }
@@ -194,5 +210,27 @@ export class SceneContextImpl implements SceneContext {
 
     private async render(): Promise<void> {
         await this.host.render();
+    }
+
+    private async flushResize(): Promise<void> {
+        if (this.handlingResize) {
+            return;
+        }
+
+        const event = this.options.resize?.consume(this.screen);
+
+        if (!event) {
+            return;
+        }
+
+        this.handlingResize = true;
+
+        try {
+            for (const handler of this.resizeHandlers) {
+                await handler(event);
+            }
+        } finally {
+            this.handlingResize = false;
+        }
     }
 }
