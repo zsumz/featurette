@@ -1,43 +1,20 @@
-import type { EventEmitter } from 'node:events';
 import readline from 'node:readline';
 import type { InputController, KeyEvent } from '../core/input.js';
 import type { TerminalResizeSource } from '../core/runtime.js';
 import type { TerminalInfo } from '../core/types.js';
-import type { WritableLike } from '../renderers/terminal.js';
+import type {
+    KeypressKey,
+    ReadableTTYLike,
+    TerminalSessionOptions,
+    WritableTTYLike,
+} from './session-types.js';
 
-type KeypressKey = Omit<KeyEvent, 'name'> & { name?: string };
-type KeypressHandler = (sequence: string, key: KeypressKey) => void;
-type ResizeHandler = () => void;
-
-export interface SignalEmitterLike {
-    on(event: 'SIGWINCH', listener: ResizeHandler): this;
-    off(event: 'SIGWINCH', listener: ResizeHandler): this;
-}
-
-export interface ReadableTTYLike extends EventEmitter {
-    isTTY?: boolean;
-    isRaw?: boolean;
-    resume(): unknown;
-    setRawMode?: (mode: boolean) => ReadableTTYLike;
-    on(event: 'keypress', listener: KeypressHandler): this;
-    off(event: 'keypress', listener: KeypressHandler): this;
-}
-
-export interface WritableTTYLike extends WritableLike {
-    columns?: number;
-    rows?: number;
-    isTTY?: boolean;
-    getColorDepth?: () => number;
-}
-
-export interface TerminalSessionOptions {
-    input?: ReadableTTYLike;
-    output?: WritableTTYLike;
-    exit?: (code: number) => void;
-    ansi?: boolean;
-    useAltScreen?: boolean;
-    signals?: SignalEmitterLike;
-}
+export type {
+    ReadableTTYLike,
+    SignalEmitterLike,
+    TerminalSessionOptions,
+    WritableTTYLike,
+} from './session-types.js';
 
 export class TerminalSession {
     public readonly input: ReadableTTYLike;

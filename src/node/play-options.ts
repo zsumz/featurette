@@ -3,7 +3,7 @@ import type { Renderer } from '../core/renderer.js';
 import type { RunFilmOptions } from '../core/runtime.js';
 import type { TerminalInfo } from '../core/types.js';
 import type { TerminalRendererOptions } from '../renderers/terminal.js';
-import type { TerminalSessionOptions } from './session.js';
+import type { TerminalSessionOptions } from './session-types.js';
 
 export interface PlayOptions extends Omit<RunFilmOptions, 'renderer' | 'input'>, TerminalSessionOptions {
     ansi?: boolean;

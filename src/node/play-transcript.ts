@@ -3,7 +3,7 @@ import { runFilm, type RunFilmResult } from '../core/runtime.js';
 import type { FeaturetteFilm } from '../core/film.js';
 import type { TerminalInfo } from '../core/types.js';
 import { TranscriptRenderer } from '../renderers/transcript.js';
-import type { TerminalSessionOptions } from './session.js';
+import type { TerminalSessionOptions } from './session-types.js';
 import { toRunFilmOptions, type PlayOptions } from './play-options.js';
 
 export async function playTranscript(

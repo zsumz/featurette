@@ -1,5 +1,5 @@
 import type { TerminalSize } from '../core/types.js';
-import type { ReadableTTYLike, WritableTTYLike } from './session.js';
+import type { ReadableTTYLike, WritableTTYLike } from './session-types.js';
 
 export interface DoctorOptions {
     input?: ReadableTTYLike;
