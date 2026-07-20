@@ -1,5 +1,6 @@
 import { smoke } from 'smoque';
 import { assertInstalledMetadata } from './package-smoke/installed-metadata.ts';
+import { assertInstalledLifecycle } from './package-smoke/installed-lifecycle.ts';
 import { assertInstalledRuntime } from './package-smoke/installed-runtime.ts';
 import { assertInstalledTypes } from './package-smoke/installed-types.ts';
 import { assertTarballShape } from './package-smoke/tarball.ts';
@@ -27,5 +28,6 @@ smoke.suite('featurette package can be packed and imported', { tags: ['package']
     await installPackedPackage(t, fixture, tarball);
     await assertInstalledMetadata(t, fixture);
     await assertInstalledRuntime(t, fixture);
+    await assertInstalledLifecycle(t, fixture);
     await assertInstalledTypes(t, fixture, workspace.root);
 });
