@@ -1,6 +1,7 @@
 import type { Clock } from '../clock.js';
 import type { FeaturetteFilm } from '../film.js';
 import type { Renderer } from '../renderer.js';
+import type { RuntimeResizeState } from '../runtime/resize.js';
 import type { Layer, Screen, ScreenComposeOptions } from '../screen.js';
 import type { LayerOptions, TerminalInfo, TranscriptEntry, Voice } from '../types.js';
 import type { EffectsHost } from './effects-host.js';
@@ -21,6 +22,7 @@ interface SceneRuntimeHostOptions {
     clock: Clock;
     terminal: TerminalInfo;
     runtime: SceneRuntimeOptions;
+    resize?: RuntimeResizeState;
     callbacks: SceneRuntimeCallbacks;
 }
 
@@ -70,7 +72,8 @@ export class SceneRuntimeHost implements EffectsHost, SceneTextHost {
     }
 
     public async render(options?: ScreenComposeOptions): Promise<void> {
-        await this.host.renderer.render(this.host.screen.compose(this.host.clock.now(), options), {
+        const frame = this.host.screen.compose(this.host.clock.now(), options);
+        await this.host.renderer.render(this.host.resize?.fit(frame) ?? frame, {
             color: this.host.runtime.color,
             palette: this.host.film.options.palette,
             unicode: this.host.runtime.unicode,

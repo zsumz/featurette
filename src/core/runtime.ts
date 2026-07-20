@@ -13,7 +13,9 @@ export {
 export { runFilm } from './runtime/run-film.js';
 export { resolveTerminalInfo } from './runtime/terminal-info.js';
 export type {
+    PlaybackFallbackReason,
     PlaybackMode,
+    PlaybackModeChangeEvent,
     PlaybackPlan,
     RunFilmOptions,
     RunFilmResult,

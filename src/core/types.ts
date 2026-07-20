@@ -29,6 +29,8 @@ export interface TerminalInfo extends TerminalSize {
     unicode: boolean;
 }
 
+export type PlaybackMode = 'visual' | 'transcript';
+
 export type AnchorX = number | 'left' | 'center' | 'right' | `right-${number}`;
 export type AnchorY = number | 'top' | 'middle' | 'bottom' | `bottom-${number}`;
 

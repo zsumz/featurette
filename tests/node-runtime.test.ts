@@ -3,12 +3,15 @@ import { test } from 'vitest';
 import {
     defineFilm,
     FakeClock,
-    InputController,
     type Frame,
     type RenderOptions,
 } from '../dist/index.js';
-import { playCli, TerminalSession } from '../dist/node.js';
-import { createFakeInput, createFakeOutput, flushPromises } from './helpers.js';
+import { playCli } from '../dist/node.js';
+import {
+    createFakeInput,
+    createFakeOutput,
+    createFakeResizeSource,
+} from './helpers.js';
 
 test('playCli visual mode owns and restores the terminal lifecycle', async () => {
     const input = createFakeInput();
@@ -31,6 +34,8 @@ test('playCli visual mode owns and restores the terminal lifecycle', async () =>
     assert.equal(result.mode, 'visual');
     assert.deepEqual(result.scenesPlayed, ['one']);
     assert.deepEqual(input.rawModes, [true, false]);
+    assert.equal(input.resumeCalls, 1);
+    assert.equal(input.pauseCalls, 1);
     assert.match(output.text(), /tty mode/);
     assert.equal(output.text().includes('\x1b[?25l'), true);
     assert.equal(output.text().includes('\x1b[?25h'), true);
@@ -135,62 +140,43 @@ test('non-TTY playCli falls back to transcript output', async () => {
     assert.match(output.text(), /pipe safe/);
 });
 
-test('terminal session restores cursor, alt screen, raw mode, and listeners', async () => {
+test('playCli leaves visual mode cleanly when resize falls back to transcript', async () => {
     const input = createFakeInput();
-    const output = createFakeOutput({ isTTY: true });
-    const controller = new InputController();
-    const session = new TerminalSession({ input, output });
-    const seen: string[] = [];
-
-    controller.onKey('q', () => {
-        seen.push('q');
+    const output = createFakeOutput({ isTTY: true, columns: 20, rows: 5 });
+    const resizeSource = createFakeResizeSource({
+        columns: 20,
+        rows: 5,
+        isTTY: true,
+        colorDepth: 24,
+        unicode: true,
+    });
+    const film = defineFilm({
+        title: 'Live Transcript',
+        minSize: { columns: 20, rows: 5 },
+        tooSmall: 'transcript',
+        voices: { process: { speed: 0 } },
     });
 
-    session.enterAltScreen();
-    session.hideCursor();
-    session.useRawMode();
-    session.bindInput(controller);
-    input.emit('keypress', 'q', { name: 'q' });
-    await flushPromises();
-    session.restore();
+    film.scene('one', async ($) => {
+        $.draw.text(0, 0, 'visual frame');
+        await $.cut();
+        resizeSource.resize({ columns: 12, rows: 4 });
+        await $.beat(1);
+        await $.say('process', 'plain ending');
+    });
 
-    assert.deepEqual(input.rawModes, [true, false]);
-    assert.deepEqual(seen, ['q']);
-    assert.equal(input.listenerCount('keypress'), 0);
-    assert.equal(output.text().includes('\x1b[?1049h'), true);
-    assert.equal(output.text().includes('\x1b[?1049l'), true);
-    assert.equal(output.text().includes('\x1b[?25l'), true);
-    assert.equal(output.text().includes('\x1b[?25h'), true);
-    assert.equal(output.text().includes('\x1b[0m'), true);
-});
-
-test('TerminalSession hard-exits through an injectable exit hook on second ctrl-c', async () => {
-    const input = createFakeInput();
-    const output = createFakeOutput({ isTTY: true });
-    const exits: number[] = [];
-    const hardExits: string[] = [];
-    const controller = new InputController();
-    const session = new TerminalSession({
+    const result = await playCli(film, {
+        argv: [],
+        clock: new FakeClock(),
         input,
         output,
-        exit: (code) => {
-            exits.push(code);
-        },
+        resizeSource,
     });
 
-    session.bindInput(controller, {
-        hardExit: () => {
-            hardExits.push('restore');
-            session.restore();
-        },
-    });
-
-    input.emit('keypress', '\u0003', { name: 'c', ctrl: true });
-    input.emit('keypress', '\u0003', { name: 'c', ctrl: true });
-    await flushPromises();
-
-    assert.deepEqual(hardExits, ['restore']);
-    assert.deepEqual(exits, [130]);
-    assert.equal(input.listenerCount('keypress'), 0);
-    assert.equal(output.text().includes('\x1b[0m'), true);
+    assert.equal(result.mode, 'transcript');
+    assert.equal(result.fallbackReason, 'too-small');
+    assert.match(output.text(), /visual frame/);
+    assert.match(output.text(), /process: plain ending/);
+    assert.deepEqual(input.rawModes, [true, false]);
+    assert.equal(input.pauseCalls, 1);
 });

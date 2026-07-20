@@ -30,6 +30,7 @@ export function toRunFilmOptions(options: PlayOptions): Omit<RunFilmOptions, 're
         transcript: options.transcript,
         transcriptWhenNonTTY: options.transcriptWhenNonTTY,
         resizeSource: options.resizeSource,
+        onModeChange: options.onModeChange,
     };
 }
 

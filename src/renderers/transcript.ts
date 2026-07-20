@@ -20,11 +20,11 @@ export class TranscriptRenderer implements Renderer {
     }
 
     public toString(): string {
-        return this.entries.map(formatEntry).join('\n');
+        return this.entries.map(formatTranscriptEntry).join('\n');
     }
 }
 
-function formatEntry(entry: TranscriptEntry): string {
+export function formatTranscriptEntry(entry: TranscriptEntry): string {
     const voice = entry.voice ? `${entry.voice}: ` : '';
     return `${voice}${entry.text}`;
 }

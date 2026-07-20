@@ -75,6 +75,13 @@ export async function play(
             ...toRunFilmOptions(options),
             input: controller,
             resizeSource: options.resizeSource ?? session.resizeSource(),
+            onModeChange: async (event) => {
+                if (event.current === 'transcript') {
+                    session.restore();
+                }
+
+                await options.onModeChange?.(event);
+            },
             terminal,
             renderer: new TerminalRenderer({
                 output: session.output,

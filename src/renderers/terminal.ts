@@ -1,6 +1,11 @@
 import type { Renderer } from '../core/renderer.js';
 import type { Frame } from '../core/screen.js';
-import type { RenderOptions, TranscriptEntry } from '../core/types.js';
+import type {
+    PlaybackMode,
+    RenderOptions,
+    TranscriptEntry,
+} from '../core/types.js';
+import { formatTranscriptEntry } from './transcript.js';
 
 export interface WritableLike {
     write(chunk: string): boolean;
@@ -16,6 +21,7 @@ export interface TerminalRendererOptions {
 
 export class TerminalRenderer implements Renderer {
     private readonly output: WritableLike;
+    private mode: PlaybackMode = 'visual';
 
     constructor(private readonly options: TerminalRendererOptions = {}) {
         this.output = options.output ?? process.stdout;
@@ -27,7 +33,15 @@ export class TerminalRenderer implements Renderer {
         }
     }
 
+    public setMode(mode: PlaybackMode): void {
+        this.mode = mode;
+    }
+
     public render(frame: Frame, options: RenderOptions = {}): void {
+        if (this.mode === 'transcript') {
+            return;
+        }
+
         if (this.ansi) {
             this.output.write('\x1b[H');
             this.output.write(frame.toString({ ...options, color: options.color ?? true }));
@@ -40,6 +54,11 @@ export class TerminalRenderer implements Renderer {
     }
 
     public transcript(entry: TranscriptEntry): void {
+        if (this.mode === 'transcript') {
+            this.output.write(`${formatTranscriptEntry(entry)}\n`);
+            return;
+        }
+
         if (this.options.transcriptOverlay) {
             this.output.write(`\n${entry.text}`);
         }

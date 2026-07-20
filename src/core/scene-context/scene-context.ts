@@ -1,5 +1,5 @@
 import type { Clock } from '../clock.js';
-import type { FeaturetteFilm, InterruptHandler } from '../film.js';
+import type { FeaturetteFilm, InterruptHandler, Scene } from '../film.js';
 import type { InputController } from '../input.js';
 import type { Point } from '../position.js';
 import { center } from '../position.js';
@@ -23,6 +23,7 @@ import { SceneControlError } from './control.js';
 import { createDrawApi as createSceneDrawApi } from './draw-api.js';
 import { createEffectsApi as createSceneEffectsApi } from './effects.js';
 import { SceneRuntimeHost } from './scene-runtime-host.js';
+import { SceneExecution } from './scene-execution.js';
 import { SceneTextApi } from './text-api.js';
 
 export class SceneContextImpl implements SceneContext {
@@ -32,6 +33,7 @@ export class SceneContextImpl implements SceneContext {
     private readonly host: SceneRuntimeHost;
     private readonly textApi: SceneTextApi;
     private readonly resizeHandlers: Set<ResizeHandler> = new Set();
+    private readonly execution = new SceneExecution();
     private handlingResize = false;
 
     constructor(
@@ -53,6 +55,7 @@ export class SceneContextImpl implements SceneContext {
             clock,
             terminal,
             runtime: options,
+            resize: options.resize,
             callbacks: {
                 fadeIn: async (duration, draw, fadeOptions) => this.fadeIn(duration, draw, fadeOptions),
                 type: async (text, typeOptions) => this.type(text, typeOptions),
@@ -69,10 +72,12 @@ export class SceneContextImpl implements SceneContext {
     }
 
     public layer(name: string, options?: { zIndex?: number; hidden?: boolean }): Layer {
+        this.execution.checkpoint();
         return this.screen.layer(name, options);
     }
 
     public async clear(options: ClearOptions = {}): Promise<void> {
+        this.execution.checkpoint();
         await this.flushResize();
         this.screen.clear(options.layer);
         this.textApi.resetCursor();
@@ -84,12 +89,15 @@ export class SceneContextImpl implements SceneContext {
     }
 
     public async wait(ms = 0): Promise<void> {
+        this.execution.checkpoint();
+
         if (this.options.skip) {
+            await this.flushResize();
             return;
         }
 
         const speed = this.options.speed && this.options.speed > 0 ? this.options.speed : 1;
-        await this.clock.wait(ms / speed);
+        await this.execution.run(async () => this.clock.wait(ms / speed));
         await this.flushResize();
     }
 
@@ -188,10 +196,18 @@ export class SceneContextImpl implements SceneContext {
         throw new SceneControlError('quit');
     }
 
-    public async runInterruptHandlers(): Promise<void> {
-        for (const handler of this.interruptHandlers) {
-            await handler(this);
+    public async handleInterrupt(): Promise<void> {
+        try {
+            for (const handler of this.interruptHandlers) {
+                await handler(this);
+            }
+        } catch (error) {
+            this.execution.interrupt(error);
         }
+    }
+
+    public async run(scene: Scene): Promise<void> {
+        await this.execution.run(async () => scene(this));
     }
 
     private createDrawApi(): DrawAPI {
@@ -209,7 +225,7 @@ export class SceneContextImpl implements SceneContext {
     }
 
     private async render(): Promise<void> {
-        await this.host.render();
+        await this.execution.run(async () => this.host.render());
     }
 
     private async flushResize(): Promise<void> {
@@ -217,7 +233,7 @@ export class SceneContextImpl implements SceneContext {
             return;
         }
 
-        const event = this.options.resize?.consume(this.screen);
+        const event = await this.options.resize?.consume(this.screen);
 
         if (!event) {
             return;

@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { defineFilm } from '../dist/index.js';
+import {
+    defineFilm,
+    InputController,
+    runFilm,
+    StringRenderer,
+    type Clock,
+} from '../dist/index.js';
 import { renderFilm } from '../dist/test.js';
+import { flushPromises } from './helpers.js';
 
 test('skipScene marks the current scene played and continues', async () => {
     const film = defineFilm({ title: 'Skip Control' });
@@ -44,3 +51,77 @@ test('quit stops playback before later scenes run', async () => {
     assert.match(result.transcript, /goodbye/);
     assert.doesNotMatch(result.transcript, /should not render/);
 });
+
+test('quit from a film interrupt handler stops a suspended scene cleanly', async () => {
+    const film = defineFilm({
+        title: 'Interrupt Quit',
+        voices: { process: { speed: 0 } },
+    });
+    const controller = new InputController();
+    const renderer = new StringRenderer();
+
+    film.onInterrupt(async ($) => {
+        await $.say('process', 'graceful goodbye');
+        $.quit();
+    });
+    film.scene('waiting', async ($) => {
+        await $.wait(60_000);
+        await $.say('process', 'too late');
+    });
+
+    const playback = runFilm(film, {
+        clock: new SuspendedClock(),
+        input: controller,
+        renderer,
+        terminal: { columns: 40, rows: 8 },
+    });
+
+    await flushPromises();
+    await controller.emitCtrlC();
+    const result = await playback;
+
+    assert.deepEqual(result.scenesPlayed, []);
+    assert.match(renderer.transcriptText(), /graceful goodbye/);
+    assert.doesNotMatch(renderer.transcriptText(), /too late/);
+});
+
+test('skipScene from a film interrupt handler advances to the next scene', async () => {
+    const film = defineFilm({ title: 'Interrupt Skip' });
+    const controller = new InputController();
+    const renderer = new StringRenderer();
+
+    film.onInterrupt(($) => {
+        $.skipScene();
+    });
+    film.scene('waiting', async ($) => {
+        await $.wait(60_000);
+    });
+    film.scene('after', async ($) => {
+        $.draw.text(0, 0, 'continued');
+        await $.cut();
+    });
+
+    const playback = runFilm(film, {
+        clock: new SuspendedClock(),
+        input: controller,
+        renderer,
+        terminal: { columns: 20, rows: 4 },
+    });
+
+    await flushPromises();
+    await controller.emitCtrlC();
+    const result = await playback;
+
+    assert.deepEqual(result.scenesPlayed, ['waiting', 'after']);
+    assert.match(renderer.lastFrame(), /continued/);
+});
+
+class SuspendedClock implements Clock {
+    public now(): number {
+        return 0;
+    }
+
+    public async wait(): Promise<void> {
+        await new Promise<void>(() => undefined);
+    }
+}

@@ -4,6 +4,7 @@ import type { FeaturetteFilm } from '../film.js';
 import { InputController } from '../input.js';
 import { Screen } from '../screen.js';
 import { assertPlayableSize, planPlayback } from './playback-plan.js';
+import { RuntimePlaybackState } from './playback-state.js';
 import { RuntimeResizeState } from './resize.js';
 import { resolveTerminalInfo } from './terminal-info.js';
 import type { RunFilmOptions, RunFilmResult } from './types.js';
@@ -13,12 +14,18 @@ export async function runFilm(
     options: RunFilmOptions,
 ): Promise<RunFilmResult> {
     const initialTerminal = resolveTerminalInfo(film.options.minSize, options.terminal);
-    const resize = new RuntimeResizeState(initialTerminal, options.resizeSource);
-    const plan = planPlayback(film, resize.terminal, {
+    const plan = planPlayback(film, initialTerminal, {
         transcript: options.transcript,
         transcriptWhenNonTTY: options.transcriptWhenNonTTY,
     });
     assertPlayableSize(film, plan);
+    const playback = new RuntimePlaybackState(plan, options.renderer, options.onModeChange);
+    const resize = new RuntimeResizeState(initialTerminal, options.resizeSource, {
+        minimum: film.options.minSize,
+        mode: film.options.resize,
+        playback,
+        tooSmall: film.options.tooSmall,
+    });
     const clock = options.clock ?? new RealClock();
     const input = options.input ?? new InputController();
     const scenes = options.scene
@@ -26,11 +33,13 @@ export async function runFilm(
         : film.scenes;
     const scenesPlayed: string[] = [];
 
-    await options.renderer.begin?.(resize.terminal);
-
     try {
+        await options.renderer.begin?.(resize.terminal);
+        await playback.begin(resize.terminal);
+
         for (const scene of scenes) {
-            const screen = new Screen(resize.terminal.columns, resize.terminal.rows);
+            const screenSize = resize.screenSize;
+            const screen = new Screen(screenSize.columns, screenSize.rows);
             const interruptHandlers = [...film.interruptHandlers];
             const filmPrefersReducedMotion =
                 film.options.reducedMotion !== undefined && film.options.reducedMotion !== false;
@@ -46,20 +55,24 @@ export async function runFilm(
                 {
                     color: options.color,
                     unicode: options.unicode,
-                    reducedMotion:
-                        plan.mode === 'transcript' || (options.reducedMotion ?? filmPrefersReducedMotion),
-                    skip: plan.mode === 'transcript' || options.skip,
+                    get reducedMotion() {
+                        return playback.mode === 'transcript' ||
+                            (options.reducedMotion ?? filmPrefersReducedMotion);
+                    },
+                    get skip() {
+                        return playback.mode === 'transcript' || options.skip;
+                    },
                     speed: options.speed,
                     resize,
                 },
             );
 
             const offCtrlC = input.onCtrlC('soft', async () => {
-                await context.runInterruptHandlers();
+                await context.handleInterrupt();
             });
 
             try {
-                await scene.run(context);
+                await context.run(scene.run);
                 scenesPlayed.push(scene.name);
             } catch (error) {
                 if (error instanceof SceneControlError && error.action === 'skip-scene') {
@@ -85,10 +98,10 @@ export async function runFilm(
     return {
         elapsed: clock.now(),
         scenesPlayed,
-        mode: plan.mode,
+        mode: playback.mode,
         terminal: resize.terminal,
-        tooSmall: plan.tooSmall,
-        fallbackReason: plan.fallbackReason,
+        tooSmall: playback.tooSmall,
+        fallbackReason: playback.fallbackReason,
     };
 }
 

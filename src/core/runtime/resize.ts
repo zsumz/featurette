@@ -1,5 +1,13 @@
-import type { Screen } from '../screen.js';
-import type { TerminalInfo } from '../types.js';
+import type { Frame, Screen } from '../screen.js';
+import type {
+    ResizeMode,
+    TerminalInfo,
+    TerminalSize,
+    TooSmallBehavior,
+} from '../types.js';
+import { isTerminalTooSmall, TerminalTooSmallError } from './playback-plan.js';
+import type { RuntimePlaybackState } from './playback-state.js';
+import { fitFrameToViewport } from './viewport.js';
 
 export interface ResizeEvent {
     previous: TerminalInfo;
@@ -13,20 +21,54 @@ export interface TerminalResizeSource {
     onResize(handler: () => void): () => void;
 }
 
+interface RuntimeResizeOptions {
+    minimum?: TerminalSize;
+    mode?: ResizeMode;
+    playback: RuntimePlaybackState;
+    tooSmall?: TooSmallBehavior;
+}
+
 export class RuntimeResizeState {
     private pending = false;
     private readonly offResize?: () => void;
+    private readonly stage: TerminalSize;
 
     constructor(
         public readonly terminal: TerminalInfo,
         private readonly source?: TerminalResizeSource,
+        private readonly options?: RuntimeResizeOptions,
     ) {
+        this.stage = {
+            columns: terminal.columns,
+            rows: terminal.rows,
+        };
         this.offResize = source?.onResize(() => {
             this.pending = true;
         });
     }
 
-    public consume(screen: Screen): ResizeEvent | undefined {
+    public get screenSize(): TerminalSize {
+        if (this.options?.mode === 'crop' || this.options?.mode === 'letterbox') {
+            return { ...this.stage };
+        }
+
+        return {
+            columns: this.terminal.columns,
+            rows: this.terminal.rows,
+        };
+    }
+
+    public fit(frame: Frame): Frame {
+        const mode = this.options?.mode;
+
+        if (mode !== 'crop' && mode !== 'letterbox') {
+            return frame;
+        }
+
+        return fitFrameToViewport(frame, this.terminal, mode);
+    }
+
+    public async consume(screen: Screen): Promise<ResizeEvent | undefined> {
         if (!this.pending || !this.source) {
             return undefined;
         }
@@ -41,13 +83,38 @@ export class RuntimeResizeState {
         }
 
         Object.assign(this.terminal, current);
-        screen.resize(current);
+        await this.applyPolicy(screen, current);
 
         return { previous, current: { ...current } };
     }
 
     public dispose(): void {
         this.offResize?.();
+    }
+
+    private async applyPolicy(screen: Screen, current: TerminalInfo): Promise<void> {
+        const tooSmall = isTerminalTooSmall(this.options?.minimum, current);
+        this.options?.playback.updateSize(tooSmall);
+
+        if (tooSmall) {
+            const behavior = this.options?.tooSmall ?? 'resize';
+
+            if (behavior === 'resize' && this.options?.minimum) {
+                throw new TerminalTooSmallError(current, this.options.minimum, behavior);
+            }
+
+            if (behavior === 'transcript') {
+                await this.options?.playback.useTranscript('too-small', current);
+            }
+        }
+
+        if (this.options?.mode === 'transcript') {
+            await this.options.playback.useTranscript('resize', current);
+        }
+
+        if (this.options?.mode !== 'crop' && this.options?.mode !== 'letterbox') {
+            screen.resize(current);
+        }
     }
 }
 

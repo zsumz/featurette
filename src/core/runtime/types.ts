@@ -1,16 +1,25 @@
 import type { Clock } from '../clock.js';
 import type { InputController } from '../input.js';
 import type { Renderer } from '../renderer.js';
-import type { TerminalInfo } from '../types.js';
+import type { PlaybackMode, TerminalInfo } from '../types.js';
 import type { TerminalResizeSource } from './resize.js';
 
-export type PlaybackMode = 'visual' | 'transcript';
+export type { PlaybackMode } from '../types.js';
+
+export type PlaybackFallbackReason = 'requested' | 'non-tty' | 'too-small' | 'resize';
 
 export interface PlaybackPlan {
     terminal: TerminalInfo;
     mode: PlaybackMode;
     tooSmall: boolean;
-    fallbackReason?: 'requested' | 'non-tty' | 'too-small';
+    fallbackReason?: PlaybackFallbackReason;
+}
+
+export interface PlaybackModeChangeEvent {
+    previous: PlaybackMode;
+    current: PlaybackMode;
+    reason: Extract<PlaybackFallbackReason, 'too-small' | 'resize'>;
+    terminal: TerminalInfo;
 }
 
 export interface RunFilmOptions {
@@ -27,6 +36,7 @@ export interface RunFilmOptions {
     transcript?: boolean;
     transcriptWhenNonTTY?: boolean;
     resizeSource?: TerminalResizeSource;
+    onModeChange?: (event: PlaybackModeChangeEvent) => void | Promise<void>;
 }
 
 export interface RunFilmResult {
