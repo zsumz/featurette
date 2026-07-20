@@ -8,6 +8,7 @@ import {
 } from '../core/runtime.js';
 import type { FeaturetteFilm } from '../core/film.js';
 import { TerminalRenderer } from '../renderers/terminal.js';
+import { applyCliExitCode } from './cli-exit-code.js';
 import { withTerminalSession } from './session.js';
 import { parsePlayCliFlags } from './play-cli-flags.js';
 import {
@@ -27,6 +28,7 @@ export async function play(
     if (options.renderer) {
         return runFilm(film, {
             ...toRunFilmOptions(options),
+            input: options.controller,
             transcript: options.transcript,
             renderer: options.renderer,
         });
@@ -98,7 +100,7 @@ export async function playCli(
 ): Promise<RunFilmResult> {
     const flags = parsePlayCliFlags(options.argv ?? process.argv.slice(2));
 
-    return play(film, {
+    const result = await play(film, {
         ...options,
         color: flags.noAnsi ? false : flags.color,
         ansi: !flags.noAnsi,
@@ -110,4 +112,7 @@ export async function playCli(
         transcript: flags.transcript,
         useAltScreen: !flags.noAltScreen && !flags.noAnsi,
     });
+
+    applyCliExitCode(result);
+    return result;
 }

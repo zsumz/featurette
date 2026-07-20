@@ -1,5 +1,9 @@
 import { RealClock } from '../clock.js';
-import { SceneContextImpl, SceneControlError } from '../context.js';
+import {
+    isInterruptControl,
+    SceneContextImpl,
+    SceneControlError,
+} from '../context.js';
 import type { FeaturetteFilm } from '../film.js';
 import { InputController } from '../input.js';
 import { InputScope } from '../input/input-scope.js';
@@ -9,7 +13,11 @@ import { assertPlayableSize, planPlayback } from './playback-plan.js';
 import { RuntimePlaybackState } from './playback-state.js';
 import { RuntimeResizeState } from './resize.js';
 import { resolveTerminalInfo } from './terminal-info.js';
-import type { RunFilmOptions, RunFilmResult } from './types.js';
+import type {
+    PlaybackTermination,
+    RunFilmOptions,
+    RunFilmResult,
+} from './types.js';
 
 export async function runFilm(
     film: FeaturetteFilm,
@@ -34,6 +42,7 @@ export async function runFilm(
     const clock = options.clock ?? new RealClock();
     const input = options.input ?? new InputController();
     const scenesPlayed: string[] = [];
+    let termination: PlaybackTermination = 'completed';
 
     return runWithRuntimeCleanup(async () => {
         await options.renderer.begin?.(resize.terminal);
@@ -83,6 +92,7 @@ export async function runFilm(
                 }
 
                 if (error instanceof SceneControlError && error.action === 'quit') {
+                    termination = isInterruptControl(error) ? 'interrupted' : 'quit';
                     break;
                 }
 
@@ -94,6 +104,7 @@ export async function runFilm(
         return {
             elapsed: clock.now(),
             scenesPlayed,
+            termination,
             mode: playback.mode,
             terminal: resize.terminal,
             tooSmall: playback.tooSmall,

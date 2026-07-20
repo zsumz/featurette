@@ -17,6 +17,7 @@ export type {
     PlaybackMode,
     PlaybackModeChangeEvent,
     PlaybackPlan,
+    PlaybackTermination,
     RunFilmOptions,
     RunFilmResult,
 } from './runtime/types.js';

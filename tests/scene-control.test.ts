@@ -27,6 +27,7 @@ test('skipScene marks the current scene played and continues', async () => {
     });
 
     assert.deepEqual(result.result.scenesPlayed, ['setup', 'after']);
+    assert.equal(result.result.termination, 'completed');
     assert.match(result.transcript, /before skip/);
     assert.match(result.transcript, /after skip/);
 });
@@ -48,6 +49,7 @@ test('quit stops playback before later scenes run', async () => {
     });
 
     assert.deepEqual(result.result.scenesPlayed, []);
+    assert.equal(result.result.termination, 'quit');
     assert.match(result.transcript, /goodbye/);
     assert.doesNotMatch(result.transcript, /should not render/);
 });
@@ -81,6 +83,7 @@ test('quit from a film interrupt handler stops a suspended scene cleanly', async
     const result = await playback;
 
     assert.deepEqual(result.scenesPlayed, []);
+    assert.equal(result.termination, 'interrupted');
     assert.match(renderer.transcriptText(), /graceful goodbye/);
     assert.doesNotMatch(renderer.transcriptText(), /too late/);
 });
@@ -113,6 +116,7 @@ test('skipScene from a film interrupt handler advances to the next scene', async
     const result = await playback;
 
     assert.deepEqual(result.scenesPlayed, ['waiting', 'after']);
+    assert.equal(result.termination, 'completed');
     assert.match(renderer.lastFrame(), /continued/);
 });
 

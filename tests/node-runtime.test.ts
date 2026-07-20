@@ -32,6 +32,7 @@ test('playCli visual mode owns and restores the terminal lifecycle', async () =>
     });
 
     assert.equal(result.mode, 'visual');
+    assert.equal(result.termination, 'completed');
     assert.deepEqual(result.scenesPlayed, ['one']);
     assert.deepEqual(input.rawModes, [true, false]);
     assert.equal(input.resumeCalls, 1);

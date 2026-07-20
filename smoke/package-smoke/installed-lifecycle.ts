@@ -91,8 +91,47 @@ async function assertInterruptControl(t: SmokeContext, fixture: NpmFixture): Pro
             await controller.emitCtrlC();
             const result = await playback;
 
-            if (result.scenesPlayed.length !== 0) {
-                throw new Error('interrupt quit did not stop the active scene');
+            if (result.scenesPlayed.length !== 0 || result.termination !== 'interrupted') {
+                throw new Error('interrupt quit did not report interrupted termination');
+            }
+        `);
+    });
+
+    await t.step('installed playCli applies interrupt exit status', async () => {
+        await fixture.node.inline(`
+            import {
+                InputController,
+                StringRenderer,
+                defineFilm,
+            } from 'featurette';
+            import { playCli } from 'featurette/node';
+
+            const controller = new InputController();
+            const film = defineFilm({ title: 'CLI Interrupt Status' });
+            const clock = {
+                now: () => 0,
+                wait: () => new Promise(() => {}),
+            };
+
+            film.onInterrupt(($) => $.quit());
+            film.scene('one', async ($) => $.wait(60_000));
+
+            const playback = playCli(film, {
+                argv: [],
+                clock,
+                controller,
+                renderer: new StringRenderer(),
+                terminal: { columns: 20, rows: 5 },
+            });
+
+            await new Promise((resolve) => setImmediate(resolve));
+            await controller.emitCtrlC();
+            const result = await playback;
+            const exitCode = process.exitCode;
+            process.exitCode = undefined;
+
+            if (result.termination !== 'interrupted' || exitCode !== 130) {
+                throw new Error('playCli did not apply interrupted exit status');
             }
         `);
     });

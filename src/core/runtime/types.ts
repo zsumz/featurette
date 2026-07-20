@@ -7,6 +7,7 @@ import type { TerminalResizeSource } from './resize.js';
 export type { PlaybackMode } from '../types.js';
 
 export type PlaybackFallbackReason = 'requested' | 'non-tty' | 'too-small' | 'resize';
+export type PlaybackTermination = 'completed' | 'quit' | 'interrupted';
 
 export interface PlaybackPlan {
     terminal: TerminalInfo;
@@ -42,6 +43,7 @@ export interface RunFilmOptions {
 export interface RunFilmResult {
     elapsed: number;
     scenesPlayed: string[];
+    termination: PlaybackTermination;
     mode: PlaybackMode;
     terminal: TerminalInfo;
     tooSmall: boolean;

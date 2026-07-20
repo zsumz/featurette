@@ -12,6 +12,7 @@ const typeSmokeSource = `
         type MotionFrame,
         type MotionPointFrame,
         type MoveAlongOptions,
+        type PlaybackTermination,
         type ResizeEvent,
         type RunFilmResult,
         type ScreenComposeOptions,
@@ -52,6 +53,9 @@ const typeSmokeSource = `
         terminal: { columns: 60, rows: 18 },
         skip: true,
     });
+    const readmeTermination: Promise<PlaybackTermination> = readmePlayback.then(
+        (result) => result.termination,
+    );
 
     const film = defineFilm({
         title: 'Type Smoke',
@@ -113,6 +117,7 @@ const typeSmokeSource = `
 
     void runResult;
     void readmePlayback;
+    void readmeTermination;
     void renderResult;
     void doctorReport;
     void composed;

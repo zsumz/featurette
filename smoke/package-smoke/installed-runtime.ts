@@ -89,8 +89,8 @@ async function assertMainExportRunsFilm(t: SmokeContext, fixture: NpmFixture): P
                 skip: true,
             });
 
-            if (result.mode !== 'visual') {
-                throw new Error('expected visual playback mode');
+            if (result.mode !== 'visual' || result.termination !== 'completed') {
+                throw new Error('expected completed visual playback');
             }
 
             if (!renderer.lastFrame().includes('packed and alive')) {

@@ -159,6 +159,8 @@ film.onInterrupt(async ($) => {
 
 Featurette also restores stdin to its previous paused or flowing state. A visual film does not need to call `process.stdin.pause()` after `play` returns.
 
+Playback results report `termination` as `completed`, `quit`, or `interrupted`. `playCli` sets `process.exitCode` to `130` after an interrupt-driven quit; authored calls to `$.quit()` remain successful exits.
+
 Set a live resize policy on the film when its stage should not reflow with the terminal:
 
 ```ts

@@ -43,6 +43,7 @@ export {
     type PlaybackMode,
     type PlaybackModeChangeEvent,
     type PlaybackPlan,
+    type PlaybackTermination,
     type ResizeEvent,
     type ResizeHandler,
     type RunFilmOptions,
