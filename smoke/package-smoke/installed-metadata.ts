@@ -19,6 +19,8 @@ interface InstalledPackageJson {
     homepage?: string;
     keywords?: string[];
     sideEffects?: boolean;
+    main?: string;
+    module?: string;
     files?: string[];
     publishConfig?: {
         access?: string;
@@ -30,7 +32,13 @@ interface InstalledPackageJson {
     };
 }
 
-const expectedFiles = ['dist'] as const;
+const expectedFiles = [
+    'dist',
+    'README.md',
+    'USAGE.md',
+    'LICENSE',
+    'featurette-logo.svg',
+] as const;
 
 export async function assertInstalledMetadata(
     t: SmokeContext,
@@ -52,6 +60,8 @@ export async function assertInstalledMetadata(
         assert.equal(packageJson.bugs?.url, 'https://github.com/zsumz/featurette/issues');
         assert.equal(packageJson.homepage, 'https://github.com/zsumz/featurette#readme');
         assert.equal(packageJson.sideEffects, false);
+        assert.equal(packageJson.main, './dist/index.cjs');
+        assert.equal(packageJson.module, './dist/index.js');
         assert.deepEqual(packageJson.files, [...expectedFiles]);
         assert.equal(packageJson.publishConfig?.access, 'public');
         assert.deepEqual(Object.keys(packageJson.exports ?? {}).sort(), ['.', './node', './test']);

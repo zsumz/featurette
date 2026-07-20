@@ -2,12 +2,22 @@ import { expect, type SmokeContext } from 'smoque';
 import type { PackedFeaturetteTarball } from './workspace.ts';
 
 const requiredPackageEntries = [
+    'package/LICENSE',
+    'package/README.md',
+    'package/USAGE.md',
     'package/dist/index.d.ts',
+    'package/dist/index.d.cts',
     'package/dist/index.js',
+    'package/dist/index.cjs',
     'package/dist/node.d.ts',
+    'package/dist/node.d.cts',
     'package/dist/node.js',
+    'package/dist/node.cjs',
     'package/dist/test.d.ts',
+    'package/dist/test.d.cts',
     'package/dist/test.js',
+    'package/dist/test.cjs',
+    'package/featurette-logo.svg',
     'package/package.json',
 ] as const;
 
@@ -42,7 +52,7 @@ async function assertRequiredEntries(
     t: SmokeContext,
     tarball: PackedFeaturetteTarball,
 ): Promise<void> {
-    await t.step('tarball contains public runtime files', async () => {
+    await t.step('tarball contains public runtime and documentation files', async () => {
         await expect.archive(tarball.path).toContainEntries([...requiredPackageEntries]);
     });
 }

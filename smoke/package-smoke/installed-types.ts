@@ -7,6 +7,7 @@ const typeSmokeSource = `
         createScreen,
         defineFilm,
         frameToString,
+        play,
         runFilm,
         type MotionFrame,
         type MotionPointFrame,
@@ -21,6 +22,36 @@ const typeSmokeSource = `
     } from 'featurette';
     import { inspectTerminal, type DoctorReport } from 'featurette/node';
     import { renderScene, type RenderSceneResult } from 'featurette/test';
+
+    const readmeFilm = defineFilm({
+        title: 'Signal',
+        minSize: { columns: 60, rows: 18 },
+        voices: {
+            process: { fg: '#f6ae1b', speed: 55 },
+        },
+    });
+
+    readmeFilm.scene('wake', async ($) => {
+        await $.clear();
+
+        await $.type('hello?', {
+            at: $.center().up(1),
+            voice: 'process',
+        });
+
+        await $.beat(800);
+
+        await $.type('oh. you ran me.', {
+            at: $.center().down(1),
+            voice: 'process',
+        });
+    });
+
+    const readmePlayback: Promise<RunFilmResult> = play(readmeFilm, {
+        renderer: new StringRenderer(),
+        terminal: { columns: 60, rows: 18 },
+        skip: true,
+    });
 
     const film = defineFilm({
         title: 'Type Smoke',
@@ -81,9 +112,29 @@ const typeSmokeSource = `
     const doctorReport: DoctorReport = inspectTerminal();
 
     void runResult;
+    void readmePlayback;
     void renderResult;
     void doctorReport;
     void composed;
+`;
+
+const commonJsTypeSmokeSource = `
+    import featurette = require('featurette');
+    import featuretteNode = require('featurette/node');
+    import featuretteTest = require('featurette/test');
+
+    const film = featurette.defineFilm({ title: 'CommonJS Types' });
+
+    film.scene('one', async ($: featurette.SceneContext) => {
+        await $.say('process', 'typed require');
+    });
+
+    const rendered: Promise<featuretteTest.RenderSceneResult> =
+        featuretteTest.renderScene(film, 'one');
+    const report: featuretteNode.DoctorReport = featuretteNode.inspectTerminal();
+
+    void rendered;
+    void report;
 `;
 
 export async function assertInstalledTypes(
@@ -99,6 +150,7 @@ export async function assertInstalledTypes(
 
 async function fixtureTypeScriptProject(t: SmokeContext, fixture: NpmFixture): Promise<void> {
     await t.fs.writeText(fixture.path('types.ts'), typeSmokeSource);
+    await t.fs.writeText(fixture.path('types.cts'), commonJsTypeSmokeSource);
     await t.fs.writeJson(fixture.path('tsconfig.json'), {
         compilerOptions: {
             lib: ['ES2022'],
@@ -111,7 +163,7 @@ async function fixtureTypeScriptProject(t: SmokeContext, fixture: NpmFixture): P
             types: [],
             verbatimModuleSyntax: true,
         },
-        include: ['types.ts'],
+        include: ['types.ts', 'types.cts'],
     });
 }
 

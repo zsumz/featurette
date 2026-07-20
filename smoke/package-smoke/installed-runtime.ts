@@ -5,11 +5,53 @@ export async function assertInstalledRuntime(
     fixture: NpmFixture,
 ): Promise<void> {
     await assertPublicSurface(t, fixture);
+    await assertCommonJsSurface(t, fixture);
     await assertMainExportRunsFilm(t, fixture);
     await assertMainExportHandlesResize(t, fixture);
     await assertTestExportRendersScene(t, fixture);
     await assertNodeExportInspectsTerminal(t, fixture);
     await assertNodeExportPlaysWithoutAnsi(t, fixture);
+}
+
+async function assertCommonJsSurface(t: SmokeContext, fixture: NpmFixture): Promise<void> {
+    await t.step('installed package works through CommonJS require', async () => {
+        await fixture.node.inline(`
+            import { createRequire } from 'node:module';
+
+            const require = createRequire(import.meta.url);
+            const featurette = require('featurette');
+            const featuretteNode = require('featurette/node');
+            const featuretteTest = require('featurette/test');
+            const film = featurette.defineFilm({ title: 'CommonJS Package' });
+
+            film.scene('one', async ($) => {
+                await $.say('process', 'required and running');
+            });
+
+            const rendered = await featuretteTest.renderScene(film, 'one', {
+                terminal: { columns: 32, rows: 8 },
+            });
+            const report = featuretteNode.inspectTerminal({
+                input: { isTTY: false, resume() { return this; } },
+                output: {
+                    isTTY: false,
+                    columns: 32,
+                    rows: 8,
+                    write() { return true; },
+                    getColorDepth() { return 1; },
+                },
+                env: { TERM: 'dumb', LANG: 'C' },
+            });
+
+            if (!rendered.transcript.includes('required and running')) {
+                throw new Error('CommonJS test export did not render the film');
+            }
+
+            if (report.verdict !== 'limited') {
+                throw new Error('CommonJS node export did not inspect the terminal');
+            }
+        `);
+    });
 }
 
 async function assertPublicSurface(t: SmokeContext, fixture: NpmFixture): Promise<void> {
