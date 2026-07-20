@@ -147,6 +147,30 @@ film.scene('interactive', async ($) => {
 
 Register `film.onInterrupt(...)` for film-wide Ctrl+C handling. Featurette restores raw mode, the cursor, the alternate screen, and listeners when playback ends.
 
+Interrupt handlers run inside the active scene's control flow, so they can author a final beat and then stop or skip cleanly:
+
+```ts
+film.onInterrupt(async ($) => {
+    await $.say('process', 'returning control.');
+    $.quit();
+});
+```
+
+Featurette also restores stdin to its previous paused or flowing state. A visual film does not need to call `process.stdin.pause()` after `play` returns.
+
+Set a live resize policy on the film when its stage should not reflow with the terminal:
+
+```ts
+const film = defineFilm({
+    title: 'Signal',
+    minSize: { columns: 80, rows: 24 },
+    resize: 'letterbox',
+    tooSmall: 'transcript',
+});
+```
+
+`letterbox` preserves and centers the original stage, `crop` preserves and clips it from the top-left, and `transcript` switches to plain-text playback after a resize. Without `resize`, the stage remains responsive. Every live resize rechecks `minSize`; `tooSmall` then chooses whether to request a resize, switch to transcript, or keep playing.
+
 ## Play It
 
 `play` uses the current terminal and falls back to a plain-text transcript when output is not interactive.
@@ -212,6 +236,7 @@ Use `renderFilm` for the whole film and `renderAt` to inspect the first rendered
 | `palette` | Maps semantic color names to terminal colors. |
 | `voices` | Defines text style, speed, prefix, cursor, and jitter by voice. |
 | `minSize` | Declares the intended terminal dimensions. |
+| `resize` | Chooses `letterbox`, `crop`, or `transcript` behavior after a live resize. |
 | `tooSmall` | Chooses `resize`, `transcript`, or `play` for undersized terminals. |
 | `reducedMotion` | Collapses motion-heavy effects to accessible final states. |
 
