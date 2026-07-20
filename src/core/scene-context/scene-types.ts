@@ -1,6 +1,6 @@
 import type { InterruptHandler } from '../film.js';
 import type { Point } from '../position.js';
-import type { ResizeHandler } from '../runtime.js';
+import type { ResizeHandler } from '../runtime/resize.js';
 import type { Layer, Screen } from '../screen.js';
 import type { TerminalInfo } from '../types.js';
 import type { DrawAPI } from './draw-types.js';

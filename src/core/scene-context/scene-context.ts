@@ -4,7 +4,7 @@ import type { InputController } from '../input.js';
 import type { Point } from '../position.js';
 import { center } from '../position.js';
 import type { Renderer } from '../renderer.js';
-import type { ResizeHandler, RuntimeResizeState } from '../runtime.js';
+import type { ResizeHandler, RuntimeResizeState } from '../runtime/resize.js';
 import type { Layer, Screen } from '../screen.js';
 import type { TerminalInfo } from '../types.js';
 import type {
