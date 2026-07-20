@@ -26,8 +26,6 @@
 npm install featurette
 ```
 
-Featurette ships ESM and CommonJS entry points and requires Node.js 20.19 or newer.
-
 ## Example
 
 ```ts

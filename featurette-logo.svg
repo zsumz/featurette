@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="280" viewBox="0 0 1040 280" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="250" viewBox="0 0 1040 250" role="img" aria-labelledby="title desc">
   <title id="title">featurette</title>
   <desc id="desc">A featurette logo lockup with a compact projector icon and the words terminal movie framework.</desc>
   <defs>
@@ -24,12 +24,12 @@
         font-family: "Space Grotesk Logo", Inter, ui-sans-serif, system-ui, sans-serif;
         font-size: 132px;
         font-weight: 700;
-        letter-spacing: 0;
+        letter-spacing: -5px;
       }
     </style>
   </defs>
 
-  <rect width="1040" height="280" fill="#ffffff"/>
+  <rect width="1040" height="250" fill="#ffffff"/>
 
   <g transform="translate(112 56) scale(0.92)">
     <g transform="translate(0 17)">
@@ -42,7 +42,7 @@
     </g>
   </g>
 
-  <text class="wordmark" x="318" y="178">featurette</text>
-  <rect x="322" y="222" width="44" height="4" rx="2" fill="#f6ae1b"/>
-  <text class="tagline" x="388" y="229">TERMINAL MOVIE FRAMEWORK</text>
+  <text class="wordmark" x="280" y="178">featurette</text>
+  <rect x="284" y="222" width="48" height="4" rx="2" fill="#f6ae1b"/>
+  <text class="tagline" x="350" y="229">A TERMINAL MOVIE FRAMEWORK</text>
 </svg>
