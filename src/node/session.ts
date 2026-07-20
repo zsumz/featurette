@@ -22,6 +22,7 @@ export class TerminalSession {
     private restoreRawMode?: boolean;
     private rawModeSetter?: (mode: boolean) => ReadableTTYLike;
     private rawModeEnabled = false;
+    private pauseInputOnRestore = false;
     private cursorHidden = false;
     private altScreen = false;
     private cleanupHandlers: Array<() => void> = [];
@@ -98,6 +99,7 @@ export class TerminalSession {
 
         this.restoreRawMode = this.input.isRaw;
         this.rawModeSetter = setRawMode;
+        this.pauseInputOnRestore = this.input.isPaused?.() ?? true;
         setRawMode(true);
         this.input.resume();
         this.rawModeEnabled = true;
@@ -159,6 +161,11 @@ export class TerminalSession {
             this.rawModeSetter?.(this.restoreRawMode === true);
             this.rawModeEnabled = false;
             this.rawModeSetter = undefined;
+        }
+
+        if (this.pauseInputOnRestore) {
+            this.input.pause?.();
+            this.pauseInputOnRestore = false;
         }
 
         this.showCursor();

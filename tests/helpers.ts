@@ -5,11 +5,14 @@ import type { ReadableTTYLike, WritableTTYLike } from '../dist/node.js';
 export interface FakeInputOptions {
     isTTY?: boolean;
     isRaw?: boolean;
+    paused?: boolean;
     rawMode?: boolean;
 }
 
 export interface FakeInput extends ReadableTTYLike {
+    pauseCalls: number;
     rawModes: boolean[];
+    resumeCalls: number;
 }
 
 export interface FakeOutputOptions {
@@ -31,9 +34,22 @@ export function createFakeInput(options: FakeInputOptions = {}): FakeInput {
     const input = new EventEmitter() as FakeInput;
     input.isTTY = options.isTTY ?? true;
     input.isRaw = options.isRaw ?? false;
+    input.pauseCalls = 0;
     input.rawModes = [];
+    input.resumeCalls = 0;
+    let paused = options.paused ?? true;
 
-    input.resume = () => input;
+    input.isPaused = () => paused;
+    input.pause = () => {
+        input.pauseCalls += 1;
+        paused = true;
+        return input;
+    };
+    input.resume = () => {
+        input.resumeCalls += 1;
+        paused = false;
+        return input;
+    };
 
     if (options.rawMode ?? true) {
         input.setRawMode = (mode: boolean) => {

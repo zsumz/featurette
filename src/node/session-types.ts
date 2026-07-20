@@ -14,6 +14,8 @@ export interface SignalEmitterLike {
 export interface ReadableTTYLike extends EventEmitter {
     isTTY?: boolean;
     isRaw?: boolean;
+    isPaused?: () => boolean;
+    pause?: () => unknown;
     resume(): unknown;
     setRawMode?: (mode: boolean) => ReadableTTYLike;
     on(event: 'keypress', listener: KeypressHandler): this;
