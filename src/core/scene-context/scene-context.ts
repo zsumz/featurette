@@ -1,6 +1,6 @@
 import type { Clock } from '../clock.js';
 import type { FeaturetteFilm, InterruptHandler, Scene } from '../film.js';
-import type { InputController } from '../input.js';
+import type { InputBindings, KeyHandler } from '../input.js';
 import type { Point } from '../position.js';
 import { center } from '../position.js';
 import type { Renderer } from '../renderer.js';
@@ -43,7 +43,7 @@ export class SceneContextImpl implements SceneContext {
         private readonly renderer: Renderer,
         private readonly clock: Clock,
         public readonly terminal: TerminalInfo,
-        private readonly inputController: InputController,
+        private readonly inputController: InputBindings,
         private readonly interruptHandlers: InterruptHandler[],
         private readonly options: SceneRuntimeOptions & { resize?: RuntimeResizeState } = {},
     ) {
@@ -66,8 +66,21 @@ export class SceneContextImpl implements SceneContext {
         this.effects = this.createEffectsApi();
         this.textApi = this.createTextApi();
         this.input = {
-            onKey: (name, handler) => this.inputController.onKey(name, handler),
-            onCtrlC: (mode, handler) => this.inputController.onCtrlC(mode, handler),
+            onKey: (name, handler) => this.inputController.onKey(
+                name,
+                this.interruptOnFailure(handler),
+            ),
+            onCtrlC: (mode, handler) => {
+                if (typeof mode === 'function') {
+                    return this.inputController.onCtrlC(this.interruptOnFailure(mode));
+                }
+
+                if (!handler) {
+                    throw new Error('onCtrlC() requires a handler.');
+                }
+
+                return this.inputController.onCtrlC(mode, this.interruptOnFailure(handler));
+            },
         };
     }
 
@@ -222,6 +235,16 @@ export class SceneContextImpl implements SceneContext {
 
     private createTextApi(): SceneTextApi {
         return new SceneTextApi(this.host);
+    }
+
+    private interruptOnFailure(handler: KeyHandler): KeyHandler {
+        return async (event) => {
+            try {
+                await handler(event);
+            } catch (error) {
+                this.execution.interrupt(error);
+            }
+        };
     }
 
     private async render(): Promise<void> {

@@ -146,6 +146,7 @@ film.scene('interactive', async ($) => {
 ```
 
 Register `film.onInterrupt(...)` for film-wide Ctrl+C handling. Featurette restores raw mode, the cursor, the alternate screen, and listeners when playback ends.
+Scene input bindings are disposed automatically when their scene ends; call the returned function when a binding should stop earlier.
 
 Interrupt handlers run inside the active scene's control flow, so they can author a final beat and then stop or skip cleanly:
 

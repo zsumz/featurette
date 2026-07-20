@@ -5,6 +5,7 @@ import type { ReadableTTYLike, WritableTTYLike } from '../dist/node.js';
 export interface FakeInputOptions {
     isTTY?: boolean;
     isRaw?: boolean;
+    flowing?: boolean | null;
     paused?: boolean;
     rawMode?: boolean;
 }
@@ -37,17 +38,21 @@ export function createFakeInput(options: FakeInputOptions = {}): FakeInput {
     input.pauseCalls = 0;
     input.rawModes = [];
     input.resumeCalls = 0;
-    let paused = options.paused ?? true;
+    let flowing = resolveInitialFlowing(options);
+    Object.defineProperty(input, 'readableFlowing', {
+        configurable: true,
+        get: () => flowing,
+    });
 
-    input.isPaused = () => paused;
+    input.isPaused = () => flowing === false;
     input.pause = () => {
         input.pauseCalls += 1;
-        paused = true;
+        flowing = false;
         return input;
     };
     input.resume = () => {
         input.resumeCalls += 1;
-        paused = false;
+        flowing = true;
         return input;
     };
 
@@ -60,6 +65,18 @@ export function createFakeInput(options: FakeInputOptions = {}): FakeInput {
     }
 
     return input;
+}
+
+function resolveInitialFlowing(options: FakeInputOptions): boolean | null {
+    if (options.flowing !== undefined) {
+        return options.flowing;
+    }
+
+    if (options.paused !== undefined) {
+        return !options.paused;
+    }
+
+    return null;
 }
 
 export function createFakeOutput(options: FakeOutputOptions = {}): FakeOutput {

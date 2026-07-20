@@ -10,25 +10,25 @@ export async function assertInstalledLifecycle(
 }
 
 async function assertInputCleanup(t: SmokeContext, fixture: NpmFixture): Promise<void> {
-    await t.step('installed package pauses stdin resumed for visual playback', async () => {
+    await t.step('installed package restores fresh idle stdin after visual playback', async () => {
         await fixture.node.inline(`
             import { EventEmitter } from 'node:events';
             import { defineFilm } from 'featurette';
             import { playCli } from 'featurette/node';
 
             const input = new EventEmitter();
-            let paused = true;
             let pauseCalls = 0;
             input.isTTY = true;
             input.isRaw = false;
-            input.isPaused = () => paused;
+            input.readableFlowing = null;
+            input.isPaused = () => false;
             input.pause = () => {
                 pauseCalls += 1;
-                paused = true;
+                input.readableFlowing = false;
                 return input;
             };
             input.resume = () => {
-                paused = false;
+                input.readableFlowing = true;
                 return input;
             };
             input.setRawMode = (mode) => {
@@ -52,7 +52,7 @@ async function assertInputCleanup(t: SmokeContext, fixture: NpmFixture): Promise
                 output,
             });
 
-            if (!paused || pauseCalls !== 1 || input.isRaw) {
+            if (input.readableFlowing !== false || pauseCalls !== 1 || input.isRaw) {
                 throw new Error('visual playback did not restore stdin ownership');
             }
         `);

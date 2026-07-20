@@ -116,6 +116,84 @@ test('skipScene from a film interrupt handler advances to the next scene', async
     assert.match(renderer.lastFrame(), /continued/);
 });
 
+test('runFilm preserves caller input handlers and disposes scene handlers', async () => {
+    const film = defineFilm({ title: 'Input Ownership' });
+    const controller = new InputController();
+    const seen: string[] = [];
+
+    controller.onKey('space', () => {
+        seen.push('owner');
+    });
+    film.scene('one', async ($) => {
+        $.input.onKey('space', () => {
+            seen.push('scene');
+        });
+        await $.cut();
+    });
+
+    await runFilm(film, {
+        input: controller,
+        renderer: new StringRenderer(),
+        terminal: { columns: 20, rows: 4 },
+    });
+    await controller.emitKey({ name: 'space' });
+
+    assert.deepEqual(seen, ['owner']);
+});
+
+test('skipScene from a key handler advances to the next scene', async () => {
+    const film = defineFilm({ title: 'Key Skip' });
+    const controller = new InputController();
+    const renderer = new StringRenderer();
+
+    film.scene('waiting', async ($) => {
+        $.input.onKey('space', () => $.skipScene());
+        await $.wait(60_000);
+    });
+    film.scene('after', async ($) => {
+        $.draw.text(0, 0, 'continued');
+        await $.cut();
+    });
+
+    const playback = runFilm(film, {
+        clock: new SuspendedClock(),
+        input: controller,
+        renderer,
+        terminal: { columns: 20, rows: 4 },
+    });
+
+    await flushPromises();
+    await controller.emitKey({ name: 'space' });
+    const result = await playback;
+
+    assert.deepEqual(result.scenesPlayed, ['waiting', 'after']);
+    assert.match(renderer.lastFrame(), /continued/);
+});
+
+test('errors from key handlers fail the active scene', async () => {
+    const film = defineFilm({ title: 'Key Failure' });
+    const controller = new InputController();
+
+    film.scene('waiting', async ($) => {
+        $.input.onKey('space', () => {
+            throw new Error('input failed');
+        });
+        await $.wait(60_000);
+    });
+
+    const playback = runFilm(film, {
+        clock: new SuspendedClock(),
+        input: controller,
+        renderer: new StringRenderer(),
+        terminal: { columns: 20, rows: 4 },
+    });
+    const failedPlayback = assert.rejects(playback, /input failed/);
+
+    await flushPromises();
+    await controller.emitKey({ name: 'space' });
+    await failedPlayback;
+});
+
 class SuspendedClock implements Clock {
     public now(): number {
         return 0;

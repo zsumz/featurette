@@ -30,7 +30,7 @@ interface RuntimeResizeOptions {
 
 export class RuntimeResizeState {
     private pending = false;
-    private readonly offResize?: () => void;
+    private offResize?: () => void;
     private readonly stage: TerminalSize;
 
     constructor(
@@ -89,7 +89,10 @@ export class RuntimeResizeState {
     }
 
     public dispose(): void {
-        this.offResize?.();
+        const offResize = this.offResize;
+        this.offResize = undefined;
+        this.pending = false;
+        offResize?.();
     }
 
     private async applyPolicy(screen: Screen, current: TerminalInfo): Promise<void> {
