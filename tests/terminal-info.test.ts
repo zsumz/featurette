@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { resolveTerminalInfo } from '../dist/core/runtime.js';
+import { resolveTerminalInfo } from '../src/core/runtime/terminal-info.ts';
 
 test('resolveTerminalInfo reads terminal facts from an injected output source', () => {
     const info = resolveTerminalInfo(undefined, {}, {
