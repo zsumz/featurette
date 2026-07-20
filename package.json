@@ -24,8 +24,14 @@
     "transcript"
   ],
   "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "USAGE.md",
+    "LICENSE",
+    "featurette-logo.svg"
   ],
   "packageManager": "npm@10.9.8",
   "publishConfig": {
@@ -33,27 +39,44 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./node": {
-      "types": "./dist/node.d.ts",
-      "default": "./dist/node.js"
+      "import": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
+      "require": {
+        "types": "./dist/node.d.cts",
+        "default": "./dist/node.cjs"
+      }
     },
     "./test": {
-      "types": "./dist/test.d.ts",
-      "default": "./dist/test.js"
+      "import": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
+      },
+      "require": {
+        "types": "./dist/test.d.cts",
+        "default": "./dist/test.cjs"
+      }
     }
   },
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "npm run clean:dist && npm run build:lib",
-    "build:lib": "tsc -p tsconfig.build.json",
+    "build": "tsdown",
     "clean": "rm -rf dist coverage",
     "clean:dist": "rm -rf dist",
     "coverage": "npm run build && vitest run --coverage",
-    "doctor": "npm run build:lib && node scripts/doctor.mjs",
-    "lint": "npm run build:lib && eslint .",
+    "doctor": "npm run build && node scripts/doctor.mjs",
+    "lint": "npm run build && eslint .",
     "pack:dry-run": "npm --cache /tmp/featurette-npm-cache pack --dry-run",
     "prepack": "npm run build",
     "prepublishOnly": "node scripts/publish-guard.mjs",
@@ -66,7 +89,7 @@
     "smoke:doctor": "smoque doctor",
     "smoke:list": "smoque list smoke/",
     "test": "npm run build && vitest run",
-    "typecheck": "npm run build:lib && tsc -p tsconfig.json",
+    "typecheck": "npm run build && tsc -p tsconfig.json",
     "validate": "npm run lint && npm run typecheck && npm test && npm run coverage && npm run doctor && npm run smoke:doctor && npm run smoke:list && npm run smoke && npm run pack:dry-run"
   },
   "engines": {
@@ -78,6 +101,7 @@
     "eslint": "^10.6.0",
     "eslint-config-rubric": "^0.1.0-alpha.0",
     "smoque": "^0.1.0-alpha.1",
+    "tsdown": "^0.12.9",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
   }
