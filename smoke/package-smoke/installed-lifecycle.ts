@@ -135,6 +135,77 @@ async function assertInterruptControl(t: SmokeContext, fixture: NpmFixture): Pro
             }
         `);
     });
+
+    await t.step('installed interrupt handler owns the screen', async () => {
+        await fixture.node.inline(`
+            import {
+                InputController,
+                StringRenderer,
+                defineFilm,
+                runFilm,
+            } from 'featurette';
+
+            const controller = new InputController();
+            const renderer = new StringRenderer();
+            const releases = [];
+            let waits = 0;
+            const clock = {
+                now: () => 0,
+                wait: () => {
+                    const wait = waits;
+                    waits += 1;
+
+                    if (wait > 1) return Promise.resolve();
+
+                    return new Promise((resolve) => {
+                        releases[wait] = resolve;
+                    });
+                },
+            };
+            const film = defineFilm({ title: 'Interrupt Ownership' });
+
+            film.onInterrupt(async ($) => {
+                await $.clear();
+                $.draw.text(0, 0, 'goodbye');
+                await $.cut();
+                await $.wait(10);
+                $.quit();
+            });
+            film.scene('one', async ($) => {
+                $.input.onKey('space', async () => {
+                    await $.clear();
+                    $.draw.text(0, 0, 'stale scene');
+                    await $.cut();
+                });
+                await $.wait(60_000);
+            });
+
+            const playback = runFilm(film, {
+                clock,
+                input: controller,
+                renderer,
+                terminal: { columns: 20, rows: 5 },
+            });
+
+            await new Promise((resolve) => setImmediate(resolve));
+            const interruption = controller.emitCtrlC();
+            await new Promise((resolve) => setImmediate(resolve));
+            const input = controller.emitKey({ name: 'space' });
+            await new Promise((resolve) => setImmediate(resolve));
+
+            if (!renderer.lastFrame().includes('goodbye') || renderer.lastFrame().includes('stale scene')) {
+                throw new Error('active scene rendered during interrupt ownership');
+            }
+
+            releases[1]();
+            await Promise.all([interruption, input]);
+            const result = await playback;
+
+            if (result.termination !== 'interrupted' || renderer.lastFrame().includes('stale scene')) {
+                throw new Error('interrupt ownership did not survive scene shutdown');
+            }
+        `);
+    });
 }
 
 async function assertResizeFallback(t: SmokeContext, fixture: NpmFixture): Promise<void> {

@@ -7,10 +7,12 @@ import { asInterruptControl, SceneControlError } from './control.js';
 import type { InputAPI } from './input-types.js';
 
 type ControlOrigin = 'input' | 'interrupt';
+type InputExecution = (operation: () => void | Promise<void>) => Promise<void>;
 
 export class SceneInput implements InputAPI {
     constructor(
         private readonly bindings: InputBindings,
+        private readonly execute: InputExecution,
         private readonly interrupt: (error: unknown) => void,
     ) {}
 
@@ -41,7 +43,7 @@ export class SceneInput implements InputAPI {
     ): KeyHandler {
         return async (event) => {
             try {
-                await handler(event);
+                await this.execute(async () => handler(event));
             } catch (error) {
                 const fromInterrupt = controlOrigin === 'interrupt' ||
                     event.ctrl === true && event.name.toLowerCase() === 'c';

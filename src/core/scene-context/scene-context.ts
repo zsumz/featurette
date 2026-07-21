@@ -19,10 +19,11 @@ import type {
     SceneTask,
     TypeOptions,
 } from './types.js';
-import { asInterruptControl, SceneControlError } from './control.js';
+import { SceneControlError } from './control.js';
 import { createDrawApi as createSceneDrawApi } from './draw-api.js';
 import { createEffectsApi as createSceneEffectsApi } from './effects.js';
 import { SceneInput } from './scene-input.js';
+import { SceneInterrupt } from './scene-interrupt.js';
 import { SceneRuntimeHost } from './scene-runtime-host.js';
 import { SceneExecution } from './scene-execution.js';
 import { SceneTextApi } from './text-api.js';
@@ -32,6 +33,7 @@ export class SceneContextImpl implements SceneContext {
     public readonly effects: EffectsAPI;
     public readonly input: InputAPI;
     private readonly host: SceneRuntimeHost;
+    private readonly interrupt: SceneInterrupt;
     private readonly textApi: SceneTextApi;
     private readonly resizeHandlers: Set<ResizeHandler> = new Set();
     private readonly execution = new SceneExecution();
@@ -44,7 +46,7 @@ export class SceneContextImpl implements SceneContext {
         private readonly renderer: Renderer,
         private readonly clock: Clock,
         public readonly terminal: TerminalInfo,
-        inputController: InputBindings,
+        private readonly inputController: InputBindings,
         private readonly interruptHandlers: InterruptHandler[],
         private readonly options: SceneRuntimeOptions & { resize?: RuntimeResizeState } = {},
     ) {
@@ -68,9 +70,15 @@ export class SceneContextImpl implements SceneContext {
         this.textApi = this.createTextApi();
         this.input = new SceneInput(
             inputController,
+            async (operation) => this.execution.run(operation),
             (error) => {
                 this.execution.interrupt(error);
             },
+        );
+        this.interrupt = new SceneInterrupt(
+            this.execution,
+            interruptHandlers,
+            () => this.createInterruptContext(),
         );
     }
 
@@ -200,20 +208,25 @@ export class SceneContextImpl implements SceneContext {
     }
 
     public async handleInterrupt(): Promise<void> {
-        try {
-            for (const handler of this.interruptHandlers) {
-                await handler(this);
-            }
-        } catch (error) {
-            const interruption = error instanceof SceneControlError
-                ? asInterruptControl(error)
-                : error;
-            this.execution.interrupt(interruption);
-        }
+        await this.interrupt.handle();
     }
 
     public async run(scene: Scene): Promise<void> {
         await this.execution.run(async () => scene(this));
+    }
+
+    private createInterruptContext(): SceneContextImpl {
+        return new SceneContextImpl(
+            this.film,
+            this.sceneName,
+            this.screen,
+            this.renderer,
+            this.clock,
+            this.terminal,
+            this.inputController,
+            this.interruptHandlers,
+            this.options,
+        );
     }
 
     private createDrawApi(): DrawAPI {
