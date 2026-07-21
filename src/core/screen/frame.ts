@@ -40,7 +40,7 @@ export class Frame {
             renderedRows.push(line.replace(/\s+$/u, ''));
         }
 
-        return renderedRows.join('\n').replace(/\n+$/u, '');
+        return renderedRows.join('\n');
     }
 }
 

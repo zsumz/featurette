@@ -7,6 +7,9 @@ import type {
 } from '../core/types.js';
 import { formatTranscriptEntry } from './transcript.js';
 
+const ERASE_LINE = '\x1b[2K';
+const FRAME_ROW_SEPARATOR = '\r\n';
+
 export interface WritableLike {
     write(chunk: string): boolean;
 }
@@ -43,8 +46,12 @@ export class TerminalRenderer implements Renderer {
         }
 
         if (this.ansi) {
+            const rows = frame
+                .toString({ ...options, color: options.color ?? true })
+                .split('\n');
+
             this.output.write('\x1b[H');
-            this.output.write(frame.toString({ ...options, color: options.color ?? true }));
+            this.output.write(rows.map((row) => `${ERASE_LINE}${row}`).join(FRAME_ROW_SEPARATOR));
             this.output.write('\x1b[0m');
             return;
         }

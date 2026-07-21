@@ -7,10 +7,48 @@ export async function assertInstalledRuntime(
     await assertPublicSurface(t, fixture);
     await assertCommonJsSurface(t, fixture);
     await assertMainExportRunsFilm(t, fixture);
+    await assertMainExportErasesFullFrames(t, fixture);
     await assertMainExportHandlesResize(t, fixture);
     await assertTestExportRendersScene(t, fixture);
     await assertNodeExportInspectsTerminal(t, fixture);
     await assertNodeExportPlaysWithoutAnsi(t, fixture);
+}
+
+async function assertMainExportErasesFullFrames(t: SmokeContext, fixture: NpmFixture): Promise<void> {
+    await t.step('installed terminal renderer erases stale frame rows', async () => {
+        await fixture.node.inline(`
+            import { TerminalRenderer, createScreen, frameToString } from 'featurette';
+
+            const chunks = [];
+            const output = {
+                write(chunk) {
+                    chunks.push(chunk);
+                    return true;
+                },
+            };
+            const renderer = new TerminalRenderer({ output, clearOnBegin: false });
+            const screen = createScreen({ columns: 8, rows: 3 });
+
+            screen.layer('main').text(0, 0, 'wide');
+            screen.layer('main').text(0, 1, 'stale');
+            renderer.render(screen.compose());
+            screen.clear();
+            screen.layer('main').text(0, 0, 'new');
+            const frame = screen.compose();
+            renderer.render(frame);
+
+            if (frameToString(frame) !== 'new\\n\\n') {
+                throw new Error('frame string discarded blank rows');
+            }
+
+            const secondFrame = chunks.join('').split('\\x1b[H')[2];
+            const expected = '\\x1b[2Knew\\r\\n\\x1b[2K\\r\\n\\x1b[2K\\x1b[0m';
+
+            if (secondFrame !== expected) {
+                throw new Error('terminal renderer did not erase every frame row');
+            }
+        `);
+    });
 }
 
 async function assertCommonJsSurface(t: SmokeContext, fixture: NpmFixture): Promise<void> {

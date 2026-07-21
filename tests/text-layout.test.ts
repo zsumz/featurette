@@ -54,5 +54,5 @@ test('backspace clamps the cursor at the left edge', async () => {
         skip: true,
     });
 
-    assert.equal(result.lastFrame, 'x');
+    assert.equal(result.lastFrame, 'x\n');
 });
