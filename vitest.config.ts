@@ -9,6 +9,12 @@ export default defineConfig({
             exclude: [
                 'dist/**/*.d.ts',
             ],
+            thresholds: {
+                statements: 90,
+                branches: 78,
+                functions: 90,
+                lines: 95,
+            },
         },
     },
 });
