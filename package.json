@@ -1,6 +1,6 @@
 {
   "name": "featurette",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0",
   "description": "A TypeScript framework for making short films that run in the terminal.",
   "type": "module",
   "license": "MIT",
